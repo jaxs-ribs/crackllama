@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
     <title>Crackllama</title>
 </head>
 <body>
@@ -15,7 +16,7 @@
         body {
             background-color: #1e1e1e; /* Dark grey background */
             color: rgb(239, 239, 239); /* White text color */
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Apple-style font with fallbacks */
+            font-family: 'Rubik', sans-serif; /* Change the font family to Rubik */
             margin: 0;
             padding: 20px;
         }
@@ -25,8 +26,8 @@
             padding: 10px;
             border: none;
             border-radius: 20px;
-            background-color: #444;
-            color: white;
+            background-color: #272727;
+            color: rgb(221, 221, 221);
             position: fixed;
             bottom: 10px;
             left: 10px;
@@ -34,14 +35,6 @@
             resize: none;
             overflow: hidden;
             box-sizing: border-box;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            background-color: #555;
-            color: white;
-            cursor: pointer;
         }
         #answerDisplay {
             margin-top: 20px;
@@ -57,7 +50,7 @@
             font-weight: normal; /* Normal font weight */
             display: block; /* Block display to mimic a text box */
             white-space: pre-wrap; /* Ensures that spaces and line breaks are respected */
-            background-color: #555; /* Lighter grey for the text box */
+            background-color: #232323; /* Lighter grey for the text box */
             padding: 10px;
             border-radius: 5px;
         }
@@ -75,6 +68,69 @@
         }
     </style>
     <script>
+        window.speedReadingActive = false;
+        var speedReadTimeout; // This will hold the timeout ID
+        var originalText; // This will hold the original text passed to speedRead
+
+        // Persistent event listener for keydown
+        document.addEventListener('keydown', function skipSpeedRead(event) {
+            if ((event.key === "Escape" || event.key === " ") && window.speedReadingActive) {
+                finishSpeedRead();
+            }
+        });
+
+        function speedRead(text) {
+            originalText = text; // Store the original text
+            window.speedReadingActive = true; // Activate speed reading
+            const words = text.split(/[\s\n]+/);
+            const averageWordLength = 5;
+            const wpm = 600;
+            let index = 0;
+            const display = document.getElementById('answerDisplay');
+            display.innerHTML = '';
+            display.classList.add('centered');
+        
+            function displayNextWord() {
+                if (index < words.length) {
+                    const word = words[index];
+                    const wordLength = word.length;
+                    let orpIndex; // Index of the ORP character
+                    if (wordLength <= 4) {
+                        orpIndex = 1; // Second character for 1-4 length words
+                    } else if (wordLength <= 9) {
+                        orpIndex = 2; // Third character for 5-9 length words
+                    } else if (wordLength <= 13) {
+                        orpIndex = 3; // Fourth character for 10-13 length words
+                    } else {
+                        orpIndex = 4; // Fifth character for words longer than 13
+                    }
+        
+                    // Split the word to insert the highlight span
+                    const part1 = word.substring(0, orpIndex);
+                    const part2 = word.substring(orpIndex, orpIndex + 1);
+                    const part3 = word.substring(orpIndex + 1);
+        
+                    const msPerWord = (wordLength / averageWordLength) * (60000 / wpm);
+                    display.innerHTML = `<span class="speedRead">${part1}<span style="color: orange;">${part2}</span>${part3}</span>`;
+                    index++;
+                    speedReadTimeout = setTimeout(displayNextWord, msPerWord);
+                } else {
+                    finishSpeedRead();
+                }
+            }
+        
+            displayNextWord();
+        }
+
+        function finishSpeedRead() {
+            clearTimeout(speedReadTimeout); // Clear the timeout to stop the speed reading
+            const display = document.getElementById('answerDisplay');
+            display.innerHTML = `<span class="fullText">${originalText}</span>`; // Display the entire original text
+            display.classList.remove('centered');
+            document.getElementById('promptInput').classList.remove('hidden');
+            window.speedReadingActive = false; // Deactivate speed reading
+        }
+
         function submitPrompt() {
             var promptText = document.getElementById('promptInput').value;
             document.getElementById('promptInput').classList.add('hidden'); // Hide the input box
@@ -93,38 +149,6 @@
                 console.error('Error:', error);
                 document.getElementById('answerDisplay').innerText = 'Error fetching response';
                 document.getElementById('promptInput').classList.remove('hidden'); // Show the input box on error
-            });
-        }
-    
-        function speedRead(text) {
-            const words = text.split(' ');
-            const msPerWord = 60000 / 600; // 600 words per minute
-            let index = 0;
-            const display = document.getElementById('answerDisplay');
-            display.innerHTML = ''; // Clear previous text
-            display.classList.add('centered'); // Center the text
-    
-            const interval = setInterval(() => {
-                if (index < words.length) {
-                    display.innerHTML = `<span class="speedRead">${words[index]}</span>`;
-                    index++;
-                } else {
-                    finishSpeedRead();
-                }
-            }, msPerWord);
-    
-            function finishSpeedRead() {
-                clearInterval(interval);
-                display.innerHTML = `<span class="fullText">${text}</span>`; // Display full text at the end
-                display.classList.remove('centered'); // Remove centering
-                document.getElementById('promptInput').classList.remove('hidden'); // Show the input box
-            }
-    
-            document.addEventListener('keydown', function skipSpeedRead(event) {
-                if (event.key === "Enter" || event.key === "Escape" || event.key === " ") {
-                    finishSpeedRead();
-                    document.removeEventListener('keydown', skipSpeedRead); // Remove the event listener to prevent memory leaks
-                }
             });
         }
 
