@@ -8,5 +8,40 @@
 <body>
     <h1>Welcome to the Basic Index Page</h1>
     <p>This is a simple HTML page generated as per the instructions.</p>
+    
+    <!-- Chat Interface -->
+    <div>
+        <input type="text" id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)">
+        <button onclick="submitPrompt()">Submit</button>
+    </div>
+    <div id="answerDisplay"></div>
+
+    <script>
+        function submitPrompt() {
+            var promptText = document.getElementById('promptInput').value;
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/prompt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: promptText })
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('answerDisplay').innerText = data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('answerDisplay').innerText = 'Error fetching response';
+            });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Prevent form submission on Enter
+                submitPrompt();
+            }
+        }
+    </script>
 </body>
 </html>
