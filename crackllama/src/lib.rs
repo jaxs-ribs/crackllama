@@ -1,10 +1,11 @@
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-
-use kinode_process_lib::{await_message, call_init, println, Address, ProcessId, Message, Request, Response, http, get_blob};
+use kinode_process_lib::{await_message, call_init, println, Address, Message, http, get_blob};
+use std::collections::HashMap;
 
 mod structs;
 use structs::*;
+
+mod llm;
+use llm::*;
 
 wit_bindgen::generate!({
     path: "wit",
@@ -17,15 +18,15 @@ fn handle_message(our: &Address) -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("message from {:?} is not from our node", msg.source()));
     }
     if msg.source().process == "http_server:distro:sys" {
-        handle_http_messages(&our, &msg);
+        return handle_http_messages(&msg);
     }
     Ok(())
 }
 
-fn handle_http_messages(our: &Address, msg: &Message) -> anyhow::Result<()> {
+fn handle_http_messages(msg: &Message) -> anyhow::Result<()> {
     match msg {
         Message::Request { ref body, .. } => {
-            handle_http_request(our, body);
+            return handle_http_request(body);
         },
         Message::Response { .. } => {
 
@@ -35,7 +36,7 @@ fn handle_http_messages(our: &Address, msg: &Message) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn handle_http_request(our: &Address, body: &[u8]) -> anyhow::Result<()> {
+fn handle_http_request(body: &[u8]) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
         .request()
         .ok_or_else(|| anyhow::anyhow!("Failed to parse http request"))?;
@@ -45,14 +46,22 @@ fn handle_http_request(our: &Address, body: &[u8]) -> anyhow::Result<()> {
         .bytes;
 
     match path.as_str() {
-        "/prompt" => prompt(our, &bytes),
+        "/prompt" => prompt(&bytes),
         _ => Ok(()),
     }
 }
 
-fn prompt(our: &Address, bytes: &[u8]) -> anyhow::Result<()> {
+fn prompt(bytes: &[u8]) -> anyhow::Result<()> {
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
-    println!("prompt: {:?}", prompt);
+    let answer = get_groq_answer(&prompt.prompt)?;
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        answer.to_string().as_bytes().to_vec(),
+    );
     Ok(())
 }
 
