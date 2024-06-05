@@ -1,0 +1,15 @@
+[
+    {
+        "process_name": "crackllama",
+        "process_wasm_path": "/crackllama.wasm",
+        "on_exit": "Restart",
+        "request_networking": true,
+        "request_capabilities": [
+            "http_server:distro:sys",
+            "http_client:distro:sys",
+            "vfs:distro:sys"
+        ],
+        "grant_capabilities": [],
+        "public": true
+    }
+]
