@@ -145,7 +145,7 @@
         
             displayNextWord();
         }
-        
+
         function finishSpeedRead() {
             clearTimeout(speedReadTimeout); 
             const display = document.getElementById('answerDisplay');
@@ -210,13 +210,8 @@
         }
 
         function autoExpand(field) {
-            // Reset field height
             field.style.height = 'inherit';
-
-            // Get the computed styles for the element
             var computed = window.getComputedStyle(field);
-
-            // Calculate the height
             var height = parseInt(computed.getPropertyValue('border-top-width'), 10)
                         + parseInt(computed.getPropertyValue('padding-top'), 10)
                         + field.scrollHeight
