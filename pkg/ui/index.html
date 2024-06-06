@@ -96,21 +96,16 @@
         var speedReadTimeout; 
         var originalText; 
         var wpm = 600; 
-
-        // Persistent event listener for keydown
-        document.addEventListener('keydown', function skipSpeedRead(event) {
-            if ((event.key === "Escape" || event.key === " ") && window.speedReadingActive) {
-                finishSpeedRead();
-            }
-        });
+        var words; 
+        var index; 
 
         function speedRead(text) {
             originalText = text; 
             window.speedReadingActive = true; 
-            const words = text.split(/[\s\n]+/);
+            words = text.split(/[\s\n]+/);
             const wpm = window.wpm;
             const averageWordLength = 5;
-            let index = 0;
+            index = 0;
             const display = document.getElementById('answerDisplay');
             display.innerHTML = '';
             display.classList.add('centered');
@@ -150,11 +145,23 @@
         
             displayNextWord();
         }
-
+        
         function finishSpeedRead() {
             clearTimeout(speedReadTimeout); 
             const display = document.getElementById('answerDisplay');
-            display.innerHTML = `<span class="fullText">${originalText}</span>`; 
+            if (index > 0) {
+                const lastWord = words[index - 1];
+                const escapedLastWord = lastWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const lastIndex = originalText.lastIndexOf(lastWord);
+                if (lastIndex !== -1) {
+                    const beforeLastWord = originalText.substring(0, lastIndex);
+                    const afterLastWord = originalText.substring(lastIndex + lastWord.length);
+                    const highlightedText = `${beforeLastWord}<span style="color: orange;">${lastWord}</span>${afterLastWord}`;
+                    display.innerHTML = `<span class="fullText">${highlightedText}</span>`;
+                }
+            } else {
+                display.innerHTML = `<span class="fullText">${originalText}</span>`; 
+            }
             display.classList.remove('centered');
             document.getElementById('promptInput').classList.remove('hidden');
             document.getElementById('wpmControls').classList.remove('hidden');
@@ -218,6 +225,12 @@
 
             field.style.height = height + 'px';
         }
+
+        document.addEventListener('keydown', function skipSpeedRead(event) {
+            if ((event.key === "Escape" || event.key === " ") && window.speedReadingActive) {
+                finishSpeedRead();
+            }
+        });
 
         document.getElementById('promptInput').addEventListener('input', function() {
             autoExpand(this);
