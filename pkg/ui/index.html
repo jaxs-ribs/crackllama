@@ -10,7 +10,13 @@
     <div>
         <textarea id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)" rows="1"></textarea>
     </div>
+    <div id="wpmControls" >
+        <button id="decreaseWpm" style="margin-right: 5px;">&lt;</button>
+        <span id="wpmDisplay">600</span> WPM
+        <button id="increaseWpm" style="margin-left: 5px;">&gt;</button>
+    </div>
     <div id="answerDisplay"></div>
+
 
     <style>
         body {
@@ -22,7 +28,7 @@
         }
         textarea {
             margin: 0; /* Reset margin */
-            width: calc(100% - 20px); /* Adjust width considering padding */
+            width: calc(90% - 20px); /* Adjust width considering padding */
             padding: 10px;
             border: none;
             border-radius: 20px;
@@ -35,6 +41,13 @@
             resize: none;
             overflow: hidden;
             box-sizing: border-box;
+            height: 9vh;
+        }
+        #wpmControls {
+            position: fixed;
+            bottom: 10px;
+            left: calc(90% + 20px);
+            align-items: center;
         }
         #answerDisplay {
             margin-top: 20px;
@@ -68,8 +81,9 @@
     </style>
     <script>
         window.speedReadingActive = false;
-        var speedReadTimeout; // This will hold the timeout ID
-        var originalText; // This will hold the original text passed to speedRead
+        var speedReadTimeout; 
+        var originalText; 
+        var wpm = 600; 
 
         // Persistent event listener for keydown
         document.addEventListener('keydown', function skipSpeedRead(event) {
@@ -79,11 +93,11 @@
         });
 
         function speedRead(text) {
-            originalText = text; // Store the original text
-            window.speedReadingActive = true; // Activate speed reading
+            originalText = text; 
+            window.speedReadingActive = true; 
             const words = text.split(/[\s\n]+/);
+            const wpm = window.wpm;
             const averageWordLength = 5;
-            const wpm = 600;
             let index = 0;
             const display = document.getElementById('answerDisplay');
             display.innerHTML = '';
@@ -93,23 +107,22 @@
                 if (index < words.length) {
                     const word = words[index];
                     const wordLength = word.length;
-                    let orpIndex; // Index of the ORP character
-                    let spaces = ""; // Variable to hold spaces
+                    let orpIndex; 
+                    let spaces = ""; 
                     if (wordLength <= 4) {
                         orpIndex = 1;
-                        spaces = "&nbsp;&nbsp;&nbsp;"; // Three non-breaking spaces
+                        spaces = "&nbsp;&nbsp;&nbsp;"; 
                     } else if (wordLength <= 9) {
                         orpIndex = 2;
-                        spaces = "&nbsp;&nbsp;"; // Two non-breaking spaces
+                        spaces = "&nbsp;&nbsp;"; 
                     } else if (wordLength <= 13) {
                         orpIndex = 3;
-                        spaces = "&nbsp;"; // One non-breaking space
+                        spaces = "&nbsp;"; 
                     } else {
                         orpIndex = 4;
-                        spaces = ""; // No space
+                        spaces = ""; 
                     }
         
-                    // Split the word to insert the highlight span
                     const part1 = spaces + word.substring(0, orpIndex);
                     const part2 = word.substring(orpIndex, orpIndex + 1);
                     const part3 = word.substring(orpIndex + 1);
@@ -127,18 +140,20 @@
         }
 
         function finishSpeedRead() {
-            clearTimeout(speedReadTimeout); // Clear the timeout to stop the speed reading
+            clearTimeout(speedReadTimeout); 
             const display = document.getElementById('answerDisplay');
-            display.innerHTML = `<span class="fullText">${originalText}</span>`; // Display the entire original text
+            display.innerHTML = `<span class="fullText">${originalText}</span>`; 
             display.classList.remove('centered');
             document.getElementById('promptInput').classList.remove('hidden');
-            document.getElementById('promptInput').focus(); // Focus the cursor on the input box
-            window.speedReadingActive = false; // Deactivate speed reading
+            document.getElementById('wpmControls').classList.remove('hidden');
+            document.getElementById('promptInput').focus(); 
+            window.speedReadingActive = false; 
         }
 
         function submitPrompt() {
             var promptText = document.getElementById('promptInput').value;
-            document.getElementById('promptInput').classList.add('hidden'); // Hide the input box
+            document.getElementById('wpmControls').classList.add('hidden');
+            document.getElementById('promptInput').classList.add('hidden'); 
             fetch('http://localhost:8080/crackllama:crackllama:template.os/prompt', {
                 method: 'POST',
                 headers: {
@@ -155,22 +170,21 @@
             .catch(error => {
                 console.error('Error:', error);
                 document.getElementById('answerDisplay').innerText = 'Error fetching response';
-                document.getElementById('promptInput').classList.remove('hidden'); // Show the input box on error
+                document.getElementById('promptInput').classList.remove('hidden'); 
+                document.getElementById('wpmControls').classList.remove('hidden'); 
             });
         }
 
         function handleKeyPress(event) {
             if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault(); // Prevent form submission on Enter
+                event.preventDefault(); 
                 submitPrompt();
             } else if (event.key === "Enter" && event.shiftKey) {
-                // Allow Shift+Enter to insert a new line
                 let textarea = document.getElementById('promptInput');
                 let cursorPos = textarea.selectionStart;
                 let textBefore = textarea.value.substring(0, cursorPos);
                 let textAfter  = textarea.value.substring(cursorPos, textarea.value.length);
                 textarea.value = textBefore + "\n" + textAfter;
-                // Move the cursor to the right position after inserting the newline
                 textarea.selectionStart = cursorPos + 1;
                 textarea.selectionEnd = cursorPos + 1;
             }
@@ -199,6 +213,18 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('promptInput').focus();
+        });
+
+        document.getElementById('decreaseWpm').addEventListener('click', function() {
+            if (wpm > 20) { 
+                wpm -= 20;
+                document.getElementById('wpmDisplay').textContent = wpm;
+            }
+        });
+        
+        document.getElementById('increaseWpm').addEventListener('click', function() {
+            wpm += 20;
+            document.getElementById('wpmDisplay').textContent = wpm;
         });
     </script>
 
