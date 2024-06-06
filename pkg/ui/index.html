@@ -193,6 +193,10 @@
         document.getElementById('promptInput').addEventListener('input', function() {
             autoExpand(this);
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('promptInput').focus();
+        });
     </script>
 
     
