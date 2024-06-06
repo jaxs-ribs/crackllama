@@ -94,10 +94,24 @@
     <script>
         window.speedReadingActive = false;
         var speedReadTimeout; 
+        var isPaused = false;
         var originalText; 
         var wpm = 600; 
         var words; 
         var index; 
+        var displayNextWord;
+
+        function pauseContinueSpeedRead() {
+            if (window.speedReadingActive) {
+                if (isPaused) {
+                    displayNextWord();
+                    isPaused = false;
+                } else {
+                    clearTimeout(speedReadTimeout);
+                    isPaused = true;
+                }
+            }
+        }
 
         function speedRead(text) {
             originalText = text; 
@@ -110,7 +124,7 @@
             display.innerHTML = '';
             display.classList.add('centered');
         
-            function displayNextWord() {
+            displayNextWord = function() {
                 if (index < words.length) {
                     const word = words[index];
                     const wordLength = word.length;
@@ -221,12 +235,6 @@
             field.style.height = height + 'px';
         }
 
-        document.addEventListener('keydown', function skipSpeedRead(event) {
-            if ((event.key === "Escape" || event.key === " ") && window.speedReadingActive) {
-                finishSpeedRead();
-            }
-        });
-
         document.getElementById('promptInput').addEventListener('input', function() {
             autoExpand(this);
         });
@@ -245,6 +253,15 @@
         document.getElementById('increaseWpm').addEventListener('click', function() {
             wpm += 20;
             document.getElementById('wpmDisplay').textContent = wpm;
+        });
+
+        document.addEventListener('keydown', function skipSpeedRead(event) {
+            if (event.key === "Escape" && window.speedReadingActive) {
+                finishSpeedRead();
+            } else if (event.key === " " && window.speedReadingActive) {
+                event.preventDefault(); 
+                pauseContinueSpeedRead();
+            }
         });
     </script>
 
