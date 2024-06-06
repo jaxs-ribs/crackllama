@@ -132,6 +132,7 @@
             display.innerHTML = `<span class="fullText">${originalText}</span>`; // Display the entire original text
             display.classList.remove('centered');
             document.getElementById('promptInput').classList.remove('hidden');
+            document.getElementById('promptInput').focus(); // Focus the cursor on the input box
             window.speedReadingActive = false; // Deactivate speed reading
         }
 
@@ -148,6 +149,8 @@
             .then(response => response.text())
             .then(data => {
                 speedRead(data);
+                document.getElementById('promptInput').value = ''; 
+                document.getElementById('promptInput').focus(); 
             })
             .catch(error => {
                 console.error('Error:', error);
