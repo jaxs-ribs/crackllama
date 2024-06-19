@@ -65,7 +65,7 @@ fn handle_http_request(
 
 fn prompt(bytes: &[u8], current_conversation: &mut CurrentConversation) -> anyhow::Result<()> {
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
-    let answer = get_groq_answer(&prompt.prompt)?;
+    let answer = get_groq_answer_with_history(&prompt.prompt, &current_conversation.messages)?;
 
     update_conversation(&prompt.prompt, &answer, current_conversation)?;
 

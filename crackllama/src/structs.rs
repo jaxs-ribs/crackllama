@@ -19,7 +19,7 @@ impl CurrentConversation {
         self.messages.len() == 2 && self.date_created.is_none() && self.title.is_none()
     }
 
-    pub fn clear(&mut self) {
+    pub fn _clear(&mut self) {
         self.title = None;
         self.messages = vec![];
         self.date_created = None;
