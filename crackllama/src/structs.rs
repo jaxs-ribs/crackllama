@@ -7,6 +7,14 @@ pub enum Model {
 }
 
 impl Model {
+    pub fn from_index(index: usize) -> Self {
+        match index {
+            0 => Model::Llama38B,
+            1 => Model::Llama370B,
+            _ => panic!("Invalid model index"),
+        }
+    }
+    
     pub fn get_model_name(&self) -> String {
         match self {
             Model::Llama38B => "llama3-8b-8192".to_string(),

@@ -7,9 +7,9 @@ use llm_interface::openai::ChatRequestBuilder;
 pub const LLM_ADDRESS: (&str, &str, &str, &str) =
     ("our", "openai", "command_center", "appattacc.os");
 
-pub fn get_groq_answer(text: &str) -> anyhow::Result<String> {
+pub fn get_groq_answer(text: &str, model: &str) -> anyhow::Result<String> {
     let request = ChatRequestBuilder::default()
-        .model("llama3-8b-8192".to_string())
+        .model(model.to_string())
         .messages(vec![MessageBuilder::default()
             .role("user".to_string())
             .content(text.to_string())
@@ -25,7 +25,7 @@ pub fn get_groq_answer(text: &str) -> anyhow::Result<String> {
     Ok(chat.choices[0].message.content.clone())
 }
 
-pub fn get_groq_answer_with_history(text: &str, message_history: &Vec<String>) -> anyhow::Result<String> {
+pub fn get_groq_answer_with_history(text: &str, message_history: &Vec<String>, model: &str) -> anyhow::Result<String> {
     let mut messages = vec![];
     
     // We truncate the conversation based on the number of messages to not go beyond the context window. 
@@ -56,7 +56,7 @@ pub fn get_groq_answer_with_history(text: &str, message_history: &Vec<String>) -
         .build()?);
 
     let request = ChatRequestBuilder::default()
-        .model("llama3-8b-8192".to_string())
+        .model(model.to_string())
         .messages(messages)
         .build()?;
     let request = serde_json::to_vec(&LLMRequest::GroqChat(request))?;
