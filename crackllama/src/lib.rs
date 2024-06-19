@@ -12,21 +12,22 @@ wit_bindgen::generate!({
     world: "process",
 });
 
-fn handle_message(our: &Address) -> anyhow::Result<()> {
+fn handle_message(our: &Address, current_conversation: &mut Vec<String>) -> anyhow::Result<()> {
     let msg = await_message()?;
     if msg.source().node != our.node {
         return Err(anyhow::anyhow!("message from {:?} is not from our node", msg.source()));
     }
     if msg.source().process == "http_server:distro:sys" {
-        return handle_http_messages(&msg);
+        return handle_http_messages(&msg, current_conversation);
     }
+
     Ok(())
 }
 
-fn handle_http_messages(msg: &Message) -> anyhow::Result<()> {
+fn handle_http_messages(msg: &Message, current_conversation: &mut Vec<String>) -> anyhow::Result<()> {
     match msg {
         Message::Request { ref body, .. } => {
-            return handle_http_request(body);
+            return handle_http_request(body, current_conversation);
         },
         Message::Response { .. } => {
 
@@ -36,7 +37,7 @@ fn handle_http_messages(msg: &Message) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn handle_http_request(body: &[u8]) -> anyhow::Result<()> {
+fn handle_http_request(body: &[u8], current_conversation: &mut Vec<String>) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
         .request()
         .ok_or_else(|| anyhow::anyhow!("Failed to parse http request"))?;
@@ -46,14 +47,16 @@ fn handle_http_request(body: &[u8]) -> anyhow::Result<()> {
         .bytes;
 
     match path.as_str() {
-        "/prompt" => prompt(&bytes),
+        "/prompt" => prompt(&bytes, current_conversation),
         _ => Ok(()),
     }
 }
 
-fn prompt(bytes: &[u8]) -> anyhow::Result<()> {
+fn prompt(bytes: &[u8], current_conversation: &mut Vec<String>) -> anyhow::Result<()> {
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
+    current_conversation.push(prompt.prompt);
     let answer = get_groq_answer(&prompt.prompt)?;
+    current_conversation.push(answer);
     http::send_response(
         http::StatusCode::OK,
         Some(HashMap::from([(
@@ -81,8 +84,11 @@ fn init(our: Address) {
         panic!("Error binding https paths: {:?}", e);
     }
 
+    /// Note that every even number is going to be a question, and every odd number is going to be an answer
+    let mut current_conversation: Vec<String> = vec![];
+
     loop {
-        match handle_message(&our) {
+        match handle_message(&our, &mut current_conversation) {
             Ok(()) => {}
             Err(e) => {
                 println!("error: {:?}", e);
