@@ -59,8 +59,22 @@ fn handle_http_request(
 
     match path.as_str() {
         "/prompt" => prompt(&bytes, current_conversation),
+        "/new_conversation" => new_conversation(current_conversation),
         _ => Ok(()),
     }
+}
+
+fn new_conversation(current_conversation: &mut CurrentConversation) -> anyhow::Result<()> {
+    current_conversation.clear();
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        "success".to_string().as_bytes().to_vec(),
+    );
+    Ok(())
 }
 
 fn prompt(bytes: &[u8], current_conversation: &mut CurrentConversation) -> anyhow::Result<()> {
@@ -103,7 +117,7 @@ fn update_conversation(prompt: &str, answer: &str, current_conversation: &mut Cu
 call_init!(init);
 fn init(our: Address) {
     println!("begin");
-    if let Err(e) = http::serve_index_html(&our, "ui", false, true, vec!["/", "/prompt"]) {
+    if let Err(e) = http::serve_index_html(&our, "ui", false, true, vec!["/", "/prompt", "/new_conversation"]) {
         panic!("Error binding https paths: {:?}", e);
     }
 
