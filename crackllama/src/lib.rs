@@ -15,7 +15,7 @@ wit_bindgen::generate!({
 
 fn handle_message(
     our: &Address,
-    current_conversation: &mut CurrentConversation,
+    state: &mut State,
 ) -> anyhow::Result<()> {
     let msg = await_message()?;
     if msg.source().node != our.node {
@@ -25,7 +25,7 @@ fn handle_message(
         ));
     }
     if msg.source().process == "http_server:distro:sys" {
-        return handle_http_messages(&msg, current_conversation);
+        return handle_http_messages(&msg, state);
     }
 
     Ok(())
@@ -33,11 +33,11 @@ fn handle_message(
 
 fn handle_http_messages(
     msg: &Message,
-    current_conversation: &mut CurrentConversation,
+    state: &mut State,
 ) -> anyhow::Result<()> {
     match msg {
         Message::Request { ref body, .. } => {
-            return handle_http_request(body, current_conversation);
+            return handle_http_request(body, state);
         }
         Message::Response { .. } => {}
     }
@@ -47,7 +47,7 @@ fn handle_http_messages(
 
 fn handle_http_request(
     body: &[u8],
-    current_conversation: &mut CurrentConversation,
+    state: &mut State,
 ) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
         .request()
@@ -58,10 +58,24 @@ fn handle_http_request(
         .bytes;
 
     match path.as_str() {
-        "/prompt" => prompt(&bytes, current_conversation),
-        "/new_conversation" => new_conversation(current_conversation),
+        "/prompt" => prompt(&bytes, &mut state.current_conversation),
+        "/new_conversation" => new_conversation(&mut state.current_conversation),
+        "/list_models" => list_models(),
         _ => Ok(()),
     }
+}
+
+fn list_models() -> anyhow::Result<()> {
+    let models = Model::available_models();
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        serde_json::to_vec(&models)?,
+    );
+    Ok(())
 }
 
 fn new_conversation(current_conversation: &mut CurrentConversation) -> anyhow::Result<()> {
@@ -117,18 +131,14 @@ fn update_conversation(prompt: &str, answer: &str, current_conversation: &mut Cu
 call_init!(init);
 fn init(our: Address) {
     println!("begin");
-    if let Err(e) = http::serve_index_html(&our, "ui", false, true, vec!["/", "/prompt", "/new_conversation"]) {
+    if let Err(e) = http::serve_index_html(&our, "ui", false, true, vec!["/", "/prompt", "/new_conversation", "/list_models"]) {
         panic!("Error binding https paths: {:?}", e);
     }
 
-    let mut current_conversation = CurrentConversation {
-        title: None,
-        messages: vec![],
-        date_created: None,
-    };
+    let mut state = State::default();
 
     loop {
-        match handle_message(&our, &mut current_conversation) {
+        match handle_message(&our, &mut state) {
             Ok(()) => {}
             Err(e) => {
                 println!("error: {:?}", e);
