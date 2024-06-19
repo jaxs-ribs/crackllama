@@ -422,6 +422,7 @@ dependencies = [
  "llm_interface",
  "serde",
  "serde_json",
+ "storage_interface",
  "wit-bindgen",
 ]
 
@@ -1530,6 +1531,16 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "storage_interface"
+version = "0.1.0"
+source = "git+https://github.com/kinode-dao/command_center?branch=storage_interface#a120c52af4c54ab33f5f52b0593552f9c57f26dc"
+dependencies = [
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
 
 [[package]]
 name = "strsim"
