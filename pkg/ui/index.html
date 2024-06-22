@@ -1,34 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
     <title>Crackllama</title>
 </head>
+
 <body>
     <div>
-        <textarea id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)" rows="1"></textarea>
+        <textarea id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)"
+            rows="1"></textarea>
+        <button id="recordAudio">🎤</button>
     </div>
-    <div id="wpmControls" >
+    <div id="wpmControls">
         <button id="decreaseWpm" style="margin-right: 5px;">&lt;</button>
         <span id="wpmDisplay">600</span> WPM
         <button id="increaseWpm" style="margin-left: 5px;">&gt;</button>
     </div>
     <div id="answerDisplay"></div>
 
-
     <style>
         body {
-            background-color: #1e1e1e; 
-            color: rgb(239, 239, 239); 
+            background-color: #1e1e1e;
+            color: rgb(239, 239, 239);
             font-family: 'Fira Code', monospace;
             margin: 0;
             padding: 20px;
         }
+
         textarea {
-            margin: 0; 
-            width: calc(86% - 20px); 
+            margin: 0;
+            width: calc(86% - 60px);
             padding: 10px;
             border: none;
             border-radius: 20px;
@@ -37,69 +41,98 @@
             position: fixed;
             bottom: 10px;
             left: 10px;
-            right: 10px;
+            right: 60px;
             resize: none;
             overflow: hidden;
             box-sizing: border-box;
             height: 9vh;
         }
+
+        #recordAudio {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background-color: #272727;
+            color: rgb(221, 221, 221);
+            border: none;
+            border-radius: 20px;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        #recordAudio.recording {
+            background-color: #ff4444;
+        }
+
         #wpmControls {
             position: fixed;
             bottom: 4vh;
             left: calc(86% + 20px);
-            white-space: nowrap; 
+            white-space: nowrap;
         }
+
         #wpmControls button {
-            background-color: black; 
-            color: white; 
-            border: none; 
-            padding: 5px 10px; 
-            cursor: pointer; 
-            border-radius: 5px; 
+            background-color: black;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
         }
-        #wpmControls button, #wpmControls span {
-            display: inline-block; 
-            vertical-align: middle; 
+
+        #wpmControls button,
+        #wpmControls span {
+            display: inline-block;
+            vertical-align: middle;
         }
+
         #answerDisplay {
             margin-top: 20px;
             padding: 10px;
             border-radius: 5px;
         }
+
         .speedRead {
-            font-size: 64px; 
+            font-size: 64px;
         }
+
         .fullText {
-            font-size: 16px; 
-            font-weight: normal; 
-            display: block; 
-            white-space: pre-wrap; 
-            background-color: #232323; 
+            font-size: 16px;
+            font-weight: normal;
+            display: block;
+            white-space: pre-wrap;
+            background-color: #232323;
             padding: 10px;
             border-radius: 5px;
         }
+
         .hidden {
             display: none;
         }
+
         .centered {
             position: fixed;
             top: 40%;
             left: 35%;
-            transform: translate(0%, -50%); 
-            font-size: 60px; 
-            text-align: left; 
-            width: calc(100% - 20px); 
+            transform: translate(0%, -50%);
+            font-size: 60px;
+            text-align: left;
+            width: calc(100% - 20px);
         }
     </style>
     <script>
         window.speedReadingActive = false;
-        var speedReadTimeout; 
+        var speedReadTimeout;
         var isPaused = false;
-        var originalText; 
-        var wpm = 600; 
-        var words; 
-        var index; 
+        var originalText;
+        var wpm = 600;
+        var words;
+        var index;
         var displayNextWord;
+
+        let mediaRecorder;
+        let audioChunks = [];
 
         function pauseContinueSpeedRead() {
             if (window.speedReadingActive) {
@@ -114,8 +147,8 @@
         }
 
         function speedRead(text) {
-            originalText = text; 
-            window.speedReadingActive = true; 
+            originalText = text;
+            window.speedReadingActive = true;
             words = text.split(/[\s\n]+/);
             const wpm = window.wpm;
             const averageWordLength = 5;
@@ -123,148 +156,146 @@
             const display = document.getElementById('answerDisplay');
             display.innerHTML = '';
             display.classList.add('centered');
-        
-            displayNextWord = function() {
+
+            displayNextWord = function () {
                 if (index < words.length) {
                     const word = words[index];
                     const wordLength = word.length;
-                    let orpIndex; 
-                    let spaces = ""; 
+                    let orpIndex;
+                    let spaces = "";
                     if (wordLength <= 4) {
                         orpIndex = 1;
-                        spaces = "&nbsp;&nbsp;&nbsp;"; 
+                        spaces = "&nbsp;&nbsp;&nbsp;";
                     } else if (wordLength <= 9) {
                         orpIndex = 2;
-                        spaces = "&nbsp;&nbsp;"; 
+                        spaces = "&nbsp;&nbsp;";
                     } else if (wordLength <= 13) {
                         orpIndex = 3;
-                        spaces = "&nbsp;"; 
+                        spaces = "&nbsp;";
                     } else {
                         orpIndex = 4;
-                        spaces = ""; 
+                        spaces = "";
                     }
-        
                     const part1 = spaces + word.substring(0, orpIndex);
                     const part2 = word.substring(orpIndex, orpIndex + 1);
                     const part3 = word.substring(orpIndex + 1);
-        
-                    const msPerWord = (wordLength / averageWordLength) * (60000 / wpm);
-                    display.innerHTML = `<span class="speedRead">${part1}<span style="color: orange;">${part2}</span>${part3}</span>`;
+                    display.innerHTML = `<span class="speedRead">${part1}<span style="color: red;">${part2}</span>${part3}</span>`;
                     index++;
-                    speedReadTimeout = setTimeout(displayNextWord, msPerWord);
+                    const delay = (60 / wpm) * 1000 * (wordLength / averageWordLength);
+                    speedReadTimeout = setTimeout(displayNextWord, delay);
                 } else {
-                    finishSpeedRead();
+                    window.speedReadingActive = false;
+                    display.classList.remove('centered');
+                    display.innerHTML = `<span class="fullText">${originalText}</span>`;
                 }
-            }
-        
+            };
             displayNextWord();
         }
 
-        function finishSpeedRead() {
-            clearTimeout(speedReadTimeout); 
-            const display = document.getElementById('answerDisplay');
-            if (index > 0) {
-                const lastWord = words[index - 1];
-                const escapedLastWord = lastWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const lastIndex = originalText.lastIndexOf(lastWord);
-                if (lastIndex !== -1) {
-                    const beforeLastWord = originalText.substring(0, lastIndex);
-                    const afterLastWord = originalText.substring(lastIndex + lastWord.length);
-                    const highlightedText = `${beforeLastWord}<span style="color: orange;">${lastWord}</span>${afterLastWord}`;
-                    display.innerHTML = `<span class="fullText">${highlightedText}</span>`;
-                }
-            } else {
-                display.innerHTML = `<span class="fullText">${originalText}</span>`; 
-            }
-            display.classList.remove('centered');
-            document.getElementById('promptInput').classList.remove('hidden');
-            document.getElementById('wpmControls').classList.remove('hidden');
-            document.getElementById('promptInput').focus(); 
-            window.speedReadingActive = false; 
-        }
-
-        function submitPrompt() {
-            var promptText = document.getElementById('promptInput').value;
-            document.getElementById('wpmControls').classList.add('hidden');
-            document.getElementById('promptInput').classList.add('hidden'); 
-            fetch('http://localhost:8080/crackllama:crackllama:template.os/prompt', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt: promptText })
-            })
-            .then(response => response.text())
-            .then(data => {
-                speedRead(data);
-                document.getElementById('promptInput').value = ''; 
-                document.getElementById('promptInput').focus(); 
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('answerDisplay').innerText = 'Error fetching response';
-                document.getElementById('promptInput').classList.remove('hidden'); 
-                document.getElementById('wpmControls').classList.remove('hidden'); 
-            });
-        }
-
         function handleKeyPress(event) {
-            if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault(); 
-                submitPrompt();
-            } else if (event.key === "Enter" && event.shiftKey) {
-                let textarea = document.getElementById('promptInput');
-                let cursorPos = textarea.selectionStart;
-                let textBefore = textarea.value.substring(0, cursorPos);
-                let textAfter  = textarea.value.substring(cursorPos, textarea.value.length);
-                textarea.value = textBefore + "\n" + textAfter;
-                textarea.selectionStart = cursorPos + 1;
-                textarea.selectionEnd = cursorPos + 1;
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendPrompt();
             }
         }
 
-        function autoExpand(field) {
-            field.style.height = 'inherit';
-            var computed = window.getComputedStyle(field);
-            var height = parseInt(computed.getPropertyValue('border-top-width'), 10)
-                        + parseInt(computed.getPropertyValue('padding-top'), 10)
-                        + field.scrollHeight
-                        + parseInt(computed.getPropertyValue('padding-bottom'), 10)
-                        + parseInt(computed.getPropertyValue('border-bottom-width'), 10);
-
-            field.style.height = height + 'px';
+        function sendPrompt() {
+            const promptInput = document.getElementById('promptInput');
+            const prompt = promptInput.value.trim();
+            if (prompt) {
+                fetch('http://localhost:8080/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt: prompt }),
+                })
+                    .then(response => response.text())
+                    .then(data => {
+                        speedRead(data);
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                    });
+                promptInput.value = '';
+            }
         }
 
-        document.getElementById('promptInput').addEventListener('input', function() {
+        function autoExpand(element) {
+            element.style.height = 'auto';
+            element.style.height = (element.scrollHeight) + 'px';
+        }
+
+        document.getElementById('promptInput').addEventListener('input', function () {
             autoExpand(this);
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('promptInput').focus();
-        });
-
-        document.getElementById('decreaseWpm').addEventListener('click', function() {
-            if (wpm > 20) { 
-                wpm -= 20;
-                document.getElementById('wpmDisplay').textContent = wpm;
+        document.getElementById('decreaseWpm').addEventListener('click', function () {
+            if (window.wpm > 100) {
+                window.wpm -= 50;
+                document.getElementById('wpmDisplay').textContent = window.wpm;
             }
         });
-        
-        document.getElementById('increaseWpm').addEventListener('click', function() {
-            wpm += 20;
-            document.getElementById('wpmDisplay').textContent = wpm;
+
+        document.getElementById('increaseWpm').addEventListener('click', function () {
+            if (window.wpm < 1000) {
+                window.wpm += 50;
+                document.getElementById('wpmDisplay').textContent = window.wpm;
+            }
         });
 
-        document.addEventListener('keydown', function skipSpeedRead(event) {
-            if (event.key === "Escape" && window.speedReadingActive) {
-                finishSpeedRead();
-            } else if (event.key === " " && window.speedReadingActive) {
-                event.preventDefault(); 
+        document.addEventListener('keydown', function (event) {
+            if (event.code === 'Space') {
                 pauseContinueSpeedRead();
             }
         });
-    </script>
 
-    
+        document.getElementById('recordAudio').addEventListener('click', toggleRecording);
+
+        function toggleRecording() {
+            const recordButton = document.getElementById('recordAudio');
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                recordButton.textContent = '🎤';
+                recordButton.classList.remove('recording');
+            } else {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        mediaRecorder = new MediaRecorder(stream);
+                        mediaRecorder.start();
+                        recordButton.textContent = '⏹️';
+                        recordButton.classList.add('recording');
+
+                        audioChunks = [];
+                        mediaRecorder.addEventListener("dataavailable", event => {
+                            audioChunks.push(event.data);
+                        });
+
+                        mediaRecorder.addEventListener("stop", () => {
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                            sendAudioToServer(audioBlob);
+                        });
+                    });
+            }
+        }
+        function sendAudioToServer(audioBlob) {
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+            fetch('http://localhost:8080/transcribe', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.text())
+                .then(transcript => {
+                    document.getElementById('promptInput').value = transcript;
+                    autoExpand(document.getElementById('promptInput'));
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error transcribing audio');
+                });
+        }
+    </script>
 </body>
+
 </html>
