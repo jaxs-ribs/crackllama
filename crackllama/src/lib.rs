@@ -92,7 +92,6 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
 
     match path.as_str() {
         "/prompt" => prompt(&bytes, state),
-        "/new_conversation" => new_conversation(&mut state.current_conversation),
         "/list_models" => list_models(),
         "/set_model" => set_model(&bytes, &mut state.current_model),
         "/transcribe" => transcribe(bytes),
@@ -149,19 +148,6 @@ fn list_models() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn new_conversation(current_conversation: &mut CurrentConversation) -> anyhow::Result<()> {
-    clear(current_conversation);
-    http::send_response(
-        http::StatusCode::OK,
-        Some(HashMap::from([(
-            "Content-Type".to_string(),
-            "application/json".to_string(),
-        )])),
-        "success".to_string().as_bytes().to_vec(),
-    );
-    Ok(())
-}
-
 fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     let transcript = get_text(bytes)?;
 
@@ -187,7 +173,6 @@ fn init(our: Address) {
         vec![
             "/",
             "/prompt",
-            "/new_conversation",
             "/list_models",
             "/set_model",
             "/transcribe",
