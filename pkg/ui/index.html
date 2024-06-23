@@ -13,6 +13,7 @@
         <textarea id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)"
             rows="1"></textarea>
         <button id="recordAudio">🎤</button>
+        <button id="newConversation">New Conversation</button>
     </div>
     <div id="wpmControls">
         <button id="decreaseWpm" style="margin-right: 5px;">&lt;</button>
@@ -46,6 +47,18 @@
             overflow: hidden;
             box-sizing: border-box;
             height: 9vh;
+        }
+
+        #newConversation {
+            position: fixed;
+            bottom: 10px;
+            right: 60px;
+            background-color: #272727;
+            color: rgb(221, 221, 221);
+            border: none;
+            border-radius: 20px;
+            padding: 10px;
+            cursor: pointer;
         }
 
         #recordAudio {
@@ -226,6 +239,19 @@
             element.style.height = (element.scrollHeight) + 'px';
         }
 
+        function saveConversation() {
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/save_conversation', {
+                method: 'POST',
+            })
+                .then(response => response.text())
+                .then(data => {
+                    console.log('Conversation saved:', data);
+                })
+                .catch((error) => {
+                    console.error('Error saving conversation:', error);
+                });
+        }
+
         document.getElementById('promptInput').addEventListener('input', function () {
             autoExpand(this);
         });
@@ -251,6 +277,10 @@
         });
 
         document.getElementById('recordAudio').addEventListener('click', toggleRecording);
+
+        document.getElementById('newConversation').addEventListener('click', saveConversation);
+
+        window.addEventListener('beforeunload', saveConversation);
 
         let audioStream;
 

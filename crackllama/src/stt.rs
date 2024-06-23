@@ -1,6 +1,4 @@
-use kinode_process_lib::{
-    await_message, call_init, Address, Message, get_blob, Request, println 
-};
+use kinode_process_lib::{println, Request};
 
 use stt_interface::STTRequest;
 use stt_interface::STTResponse;

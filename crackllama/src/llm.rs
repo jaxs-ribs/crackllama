@@ -1,4 +1,4 @@
-use kinode_process_lib::{Request, println};
+use kinode_process_lib::Request;
 use llm_interface::openai::LLMResponse;
 use llm_interface::openai::LLMRequest;
 use llm_interface::openai::MessageBuilder;

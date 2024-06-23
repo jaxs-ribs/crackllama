@@ -95,6 +95,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/list_models" => list_models(),
         "/set_model" => set_model(&bytes, &mut state.current_model),
         "/transcribe" => transcribe(bytes),
+        "/save_conversation" => save_conversation(),
         _ => Ok(()),
     }
 }
@@ -162,6 +163,19 @@ fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn save_conversation() -> anyhow::Result<()> {
+    // For now, this function does nothing
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "text/plain".to_string(),
+        )])),
+        "Success".as_bytes().to_vec(),
+    );
+    Ok(())
+}
+
 call_init!(init);
 fn init(our: Address) {
     println!("begin");
@@ -176,6 +190,7 @@ fn init(our: Address) {
             "/list_models",
             "/set_model",
             "/transcribe",
+            "/save_conversation",
         ],
     ) {
         panic!("Error binding https paths: {:?}", e);
