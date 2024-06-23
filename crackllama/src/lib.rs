@@ -9,6 +9,9 @@ use structs::*;
 mod llm;
 use llm::*;
 
+mod stt;
+use stt::*;
+
 wit_bindgen::generate!({
     path: "wit",
     world: "process",
@@ -92,7 +95,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/new_conversation" => new_conversation(&mut state.current_conversation),
         "/list_models" => list_models(),
         "/set_model" => set_model(&bytes, &mut state.current_model),
-        "/transcribe" => transcribe(&bytes),
+        "/transcribe" => transcribe(bytes),
         _ => Ok(()),
     }
 }
@@ -159,10 +162,8 @@ fn new_conversation(current_conversation: &mut CurrentConversation) -> anyhow::R
     Ok(())
 }
 
-fn transcribe(bytes: &[u8]) -> anyhow::Result<()> {
-    // This is a temporary implementation that just returns a fixed string
-    // In a real implementation, you would process the audio data here
-    let transcript = "This is a temporary transcription response.";
+fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
+    let transcript = get_text(bytes)?;
 
     http::send_response(
         http::StatusCode::OK,

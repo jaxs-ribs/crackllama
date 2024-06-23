@@ -203,7 +203,7 @@
             const promptInput = document.getElementById('promptInput');
             const prompt = promptInput.value.trim();
             if (prompt) {
-                fetch('http://localhost:8080/chat', {
+                fetch('http://localhost:8080/crackllama:crackllama:template.os/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -252,15 +252,23 @@
 
         document.getElementById('recordAudio').addEventListener('click', toggleRecording);
 
+        let audioStream;
+
         function toggleRecording() {
             const recordButton = document.getElementById('recordAudio');
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
                 recordButton.textContent = '🎤';
                 recordButton.classList.remove('recording');
+                
+                // Stop all tracks in the stream
+                if (audioStream) {
+                    audioStream.getTracks().forEach(track => track.stop());
+                }
             } else {
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
+                        audioStream = stream;
                         mediaRecorder = new MediaRecorder(stream);
                         mediaRecorder.start();
                         recordButton.textContent = '⏹️';
@@ -272,21 +280,30 @@
                         });
 
                         mediaRecorder.addEventListener("stop", () => {
-                            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                            const audioBlob = new Blob(audioChunks);
                             sendAudioToServer(audioBlob);
+                            
+                            // Clear the audioChunks array
+                            audioChunks = [];
                         });
                     });
             }
         }
         function sendAudioToServer(audioBlob) {
-            const formData = new FormData();
-            formData.append('audio', audioBlob);
-            fetch('http://localhost:8080/transcribe', {
+            console.log('Sending audio to server...'); // Add this log
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/transcribe', {
                 method: 'POST',
-                body: formData
+                body: audioBlob,
+                headers: {
+                    'Content-Type': 'audio/webm' // Changed from 'audio/mp3'
+                }
             })
-                .then(response => response.text())
+                .then(response => {
+                    console.log('Received response from server'); // Add this log
+                    return response.text();
+                })
                 .then(transcript => {
+                    console.log('Transcription received:', transcript); // Add this log
                     document.getElementById('promptInput').value = transcript;
                     autoExpand(document.getElementById('promptInput'));
                 })
