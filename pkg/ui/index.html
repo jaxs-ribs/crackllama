@@ -260,7 +260,7 @@
                 mediaRecorder.stop();
                 recordButton.textContent = '🎤';
                 recordButton.classList.remove('recording');
-                
+
                 // Stop all tracks in the stream
                 if (audioStream) {
                     audioStream.getTracks().forEach(track => track.stop());
@@ -282,7 +282,7 @@
                         mediaRecorder.addEventListener("stop", () => {
                             const audioBlob = new Blob(audioChunks);
                             sendAudioToServer(audioBlob);
-                            
+
                             // Clear the audioChunks array
                             audioChunks = [];
                         });
@@ -306,6 +306,7 @@
                     console.log('Transcription received:', transcript); // Add this log
                     document.getElementById('promptInput').value = transcript;
                     autoExpand(document.getElementById('promptInput'));
+                    document.getElementById('promptInput').focus(); // Add this line to focus on the input field
                 })
                 .catch(error => {
                     console.error('Error:', error);
