@@ -179,7 +179,7 @@
                     const part1 = spaces + word.substring(0, orpIndex);
                     const part2 = word.substring(orpIndex, orpIndex + 1);
                     const part3 = word.substring(orpIndex + 1);
-                    display.innerHTML = `<span class="speedRead">${part1}<span style="color: red;">${part2}</span>${part3}</span>`;
+                    display.innerHTML = `<span class="speedRead">${part1}<span style="color: orange;">${part2}</span>${part3}</span>`;
                     index++;
                     const delay = (60 / wpm) * 1000 * (wordLength / averageWordLength);
                     speedReadTimeout = setTimeout(displayNextWord, delay);
@@ -203,7 +203,7 @@
             const promptInput = document.getElementById('promptInput');
             const prompt = promptInput.value.trim();
             if (prompt) {
-                fetch('http://localhost:8080/crackllama:crackllama:template.os/chat', {
+                fetch('http://localhost:8080/crackllama:crackllama:template.os/prompt', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
