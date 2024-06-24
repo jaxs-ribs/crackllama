@@ -424,6 +424,7 @@ dependencies = [
  "serde_json",
  "storage_interface",
  "stt_interface",
+ "vectorbase_interface",
  "wit-bindgen",
 ]
 
@@ -1810,6 +1811,16 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
+name = "vectorbase_interface"
+version = "0.1.0"
+source = "git+https://github.com/kinode-dao/command_center?branch=vectorbase_interface#b56ebdc071d35d3d0bc02f78bdd39caa46b07f95"
+dependencies = [
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
 
 [[package]]
 name = "version_check"

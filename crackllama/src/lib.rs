@@ -1,4 +1,6 @@
-use kinode_process_lib::{await_message, call_init, get_blob, http, println, Address, Message};
+use kinode_process_lib::{
+    await_message, call_init, get_blob, http, println, Address, Message, Request, 
+};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use storage_interface::CurrentConversation;
@@ -16,6 +18,9 @@ wit_bindgen::generate!({
     path: "wit",
     world: "process",
 });
+
+pub const VECTORBASE_ADDRESS: (&str, &str, &str, &str) =
+    ("our", "vectorbase", "command_center", "appattacc.os");
 
 // TODO: These are helper functions
 pub fn is_new(current_conversation: &CurrentConversation) -> bool {
@@ -95,7 +100,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/list_models" => list_models(),
         "/set_model" => set_model(&bytes, &mut state.current_model),
         "/transcribe" => transcribe(bytes),
-        "/save_conversation" => save_conversation(),
+        "/save_conversation" => save_conversation(&state.current_conversation),
         _ => Ok(()),
     }
 }
@@ -163,8 +168,9 @@ fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn save_conversation() -> anyhow::Result<()> {
-    // For now, this function does nothing
+fn save_conversation(current_conversation: &CurrentConversation) -> anyhow::Result<()> {
+    let _json_conversation = serde_json::to_string(current_conversation)?;
+    // TODO:
     http::send_response(
         http::StatusCode::OK,
         Some(HashMap::from([(
@@ -197,6 +203,54 @@ fn init(our: Address) {
     }
 
     let mut state = State::default();
+
+    {
+        let request = vectorbase_interface::Request::ListDatabases;
+        let response = Request::to(VECTORBASE_ADDRESS)
+            .body(serde_json::to_vec(&request).unwrap())
+            .send_and_await_response(30)
+            .unwrap()
+            .unwrap();
+        if let vectorbase_interface::Response::ListDatabases(databases) =
+            serde_json::from_slice(response.body()).unwrap()
+        {
+            println!("Databases are: {:?}", databases);
+        } else {
+            println!("ERROR: {:?}", response);
+        }
+    }
+    {
+        // TODO: Turn each of these into helpers but watch the unwraps
+        // Quick testing area
+        let request = vectorbase_interface::Request::SubmitData {
+            database_name: "test3".to_string(),
+            values: vec![
+                ("id_001".to_string(), "Cats have retractable claws that help them climb and hunt.".to_string()),
+                ("id_002".to_string(), "Dogs are known for their loyalty and are often called man's best friend.".to_string()),
+                ("id_003".to_string(), "Cats can jump up to six times their length.".to_string()),
+                ("id_004".to_string(), "Dogs have an excellent sense of smell and are used in search and rescue operations.".to_string()),
+                ("id_005".to_string(), "Cats spend 70% of their lives sleeping.".to_string()),
+                ("id_006".to_string(), "Dogs can understand up to 250 words and gestures.".to_string()),
+                ("id_007".to_string(), "Cats have a third eyelid called the nictitating membrane.".to_string()),
+                ("id_008".to_string(), "Dogs sweat through their paw pads.".to_string()),
+                ("id_009".to_string(), "Cats have 32 muscles in each ear.".to_string()),
+                ("id_010".to_string(), "Dogs have three eyelids, including one to keep their eyes moist and protected.".to_string()),
+            ],
+        };
+
+        let response = Request::to(VECTORBASE_ADDRESS)
+            .body(serde_json::to_vec(&request).unwrap())
+            .send_and_await_response(30)
+            .unwrap()
+            .unwrap();
+        if let vectorbase_interface::Response::SubmitData =
+            serde_json::from_slice(response.body()).unwrap()
+        {
+            println!("Success populating!");
+        } else {
+            println!("error: {:?}", response);
+        }
+    }
 
     loop {
         match handle_message(&our, &mut state) {
