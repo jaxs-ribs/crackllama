@@ -256,6 +256,22 @@
                 });
         }
 
+        function fetchConversations() {
+            console.log('Fetching conversations...');
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/fetch_conversations', {
+                method: 'POST',
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Fetched conversations:', data);
+                })
+                .catch(error => {
+                    console.error('Error fetching conversations:', error);
+                });
+        }
+    
+        window.addEventListener('load', fetchConversations);
+
         document.getElementById('promptInput').addEventListener('input', function () {
             autoExpand(this);
         });

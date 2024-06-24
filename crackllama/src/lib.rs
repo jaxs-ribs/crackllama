@@ -195,6 +195,22 @@ fn save_conversation(state: &mut State) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn fetch_conversations(state: &State) -> anyhow::Result<()> {
+    let conversations = &state.conversations;
+    let json = serde_json::to_string(&conversations)?;
+
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        json.as_bytes().to_vec(),
+    );
+    Ok(())
+}
+
+
 fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
         .request()
@@ -210,6 +226,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/set_model" => set_model(&bytes, &mut state.current_model),
         "/transcribe" => transcribe(bytes),
         "/save_conversation" => save_conversation(state),
+        "/fetch_conversations" => fetch_conversations(state),
         _ => Ok(()),
     }
 }
@@ -229,6 +246,7 @@ fn init(our: Address) {
             "/set_model",
             "/transcribe",
             "/save_conversation",
+            "/fetch_conversations",
         ],
     ) {
         panic!("Error binding https paths: {:?}", e);
