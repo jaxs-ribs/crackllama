@@ -113,13 +113,15 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
 
     update_conversation(&prompt.prompt, &answer, &mut state.current_conversation)?;
 
+    let conversation_json = serde_json::to_string(&state.current_conversation)?;
+
     http::send_response(
         http::StatusCode::OK,
         Some(HashMap::from([(
             "Content-Type".to_string(),
             "application/json".to_string(),
         )])),
-        answer.to_string().as_bytes().to_vec(),
+        conversation_json.as_bytes().to_vec(),
     );
     Ok(())
 }
@@ -234,7 +236,7 @@ fn init(our: Address) {
 
     let mut state = State::fetch().unwrap_or_default();
 
-    temp_test();
+    // temp_test(); TODO: Zena: Remove
 
     loop {
         match handle_message(&our, &mut state) {

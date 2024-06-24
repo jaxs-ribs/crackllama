@@ -212,6 +212,8 @@
             }
         }
 
+        let conversationHistory;
+
         function sendPrompt() {
             const promptInput = document.getElementById('promptInput');
             const prompt = promptInput.value.trim();
@@ -223,9 +225,11 @@
                     },
                     body: JSON.stringify({ prompt: prompt }),
                 })
-                    .then(response => response.text())
+                    .then(response => response.json())
                     .then(data => {
-                        speedRead(data);
+                        conversationHistory = data;
+                        const lastMessage = data.messages[data.messages.length - 1];
+                        speedRead(lastMessage);
                     })
                     .catch((error) => {
                         console.error('Error:', error);
