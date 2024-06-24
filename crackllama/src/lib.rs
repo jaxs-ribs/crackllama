@@ -88,24 +88,6 @@ fn handle_http_messages(msg: &Message, state: &mut State) -> anyhow::Result<()> 
     Ok(())
 }
 
-fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
-    let http_request = http::HttpServerRequest::from_bytes(body)?
-        .request()
-        .ok_or_else(|| anyhow::anyhow!("Failed to parse http request"))?;
-    let path = http_request.path()?;
-    let bytes = get_blob()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get blob"))?
-        .bytes;
-
-    match path.as_str() {
-        "/prompt" => prompt(&bytes, state),
-        "/list_models" => list_models(),
-        "/set_model" => set_model(&bytes, &mut state.current_model),
-        "/transcribe" => transcribe(bytes),
-        "/save_conversation" => save_conversation(&mut state.current_conversation),
-        _ => Ok(()),
-    }
-}
 
 fn set_model(bytes: &[u8], current_model: &mut Model) -> anyhow::Result<()> {
     let index = serde_json::from_slice::<usize>(bytes)?;
@@ -204,6 +186,25 @@ fn save_conversation(current_conversation: &mut CurrentConversation) -> anyhow::
     );
     clear(current_conversation);
     Ok(())
+}
+
+fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
+    let http_request = http::HttpServerRequest::from_bytes(body)?
+        .request()
+        .ok_or_else(|| anyhow::anyhow!("Failed to parse http request"))?;
+    let path = http_request.path()?;
+    let bytes = get_blob()
+        .ok_or_else(|| anyhow::anyhow!("Failed to get blob"))?
+        .bytes;
+
+    match path.as_str() {
+        "/prompt" => prompt(&bytes, state),
+        "/list_models" => list_models(),
+        "/set_model" => set_model(&bytes, &mut state.current_model),
+        "/transcribe" => transcribe(bytes),
+        "/save_conversation" => save_conversation(&mut state.current_conversation),
+        _ => Ok(()),
+    }
 }
 
 call_init!(init);
