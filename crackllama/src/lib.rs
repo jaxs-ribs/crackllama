@@ -102,7 +102,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/list_models" => list_models(),
         "/set_model" => set_model(&bytes, &mut state.current_model),
         "/transcribe" => transcribe(bytes),
-        "/save_conversation" => save_conversation(&state.current_conversation),
+        "/save_conversation" => save_conversation(&mut state.current_conversation),
         _ => Ok(()),
     }
 }
@@ -170,8 +170,8 @@ fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn save_conversation(current_conversation: &CurrentConversation) -> anyhow::Result<()> {
-    let Some(title) = current_conversation.title else {
+fn save_conversation(current_conversation: &mut CurrentConversation) -> anyhow::Result<()> {
+    let Some(title) = &current_conversation.title else {
         return Err(anyhow::anyhow!("No title found"));
     };
 
@@ -202,6 +202,7 @@ fn save_conversation(current_conversation: &CurrentConversation) -> anyhow::Resu
         )])),
         status.as_bytes().to_vec(),
     );
+    clear(current_conversation);
     Ok(())
 }
 
