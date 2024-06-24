@@ -192,6 +192,16 @@
             }
         }
 
+        function stopSpeedReading() {
+            if (window.speedReadingActive) {
+                clearTimeout(speedReadTimeout);
+                window.speedReadingActive = false;
+                const display = document.getElementById('answerDisplay');
+                display.classList.remove('centered');
+                display.innerHTML = `<span class="fullText">${originalText}</span>`;
+            }
+        }
+
         function speedRead(text) {
             originalText = text;
             window.speedReadingActive = true;
@@ -345,6 +355,8 @@
         document.addEventListener('keydown', function (event) {
             if (event.code === 'Space') {
                 pauseContinueSpeedRead();
+            } else if (event.code == 'Escape') {
+                stopSpeedReading();
             }
         });
 
