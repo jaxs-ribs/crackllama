@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use storage_interface::CurrentConversation;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Model {
@@ -48,3 +47,10 @@ pub struct State {
     pub current_model: Model,
 }
 
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct CurrentConversation {
+    pub title: Option<String>,
+    /// Note that every even number is going to be a question, and every odd number is going to be an answer
+    pub messages: Vec<String>,
+    pub date_created: Option<i64>,
+}

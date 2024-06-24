@@ -3,7 +3,6 @@ use kinode_process_lib::{
 };
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
-use storage_interface::CurrentConversation;
 
 mod structs;
 use structs::*;
@@ -249,6 +248,26 @@ fn init(our: Address) {
             println!("Success populating!");
         } else {
             println!("error: {:?}", response);
+        }
+    }
+    {
+        let request = vectorbase_interface::Request::SemanticSearch {
+            database_name: "test3".to_string(),
+            top_k: 3,
+            query: "What are cats like?".to_string(),
+        };
+
+        let response = Request::to(VECTORBASE_ADDRESS)
+            .body(serde_json::to_vec(&request).unwrap())
+            .send_and_await_response(30)
+            .unwrap()
+            .unwrap();
+        if let vectorbase_interface::Response::SemanticSearch(results) =
+            serde_json::from_slice(response.body()).unwrap()
+        {
+            println!("Results are: {:?}", results);
+        } else {
+            println!("ERROR: {:?}", response);
         }
     }
 
