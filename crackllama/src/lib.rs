@@ -222,7 +222,7 @@ fn init(our: Address) {
         // TODO: Turn each of these into helpers but watch the unwraps
         // Quick testing area
         let request = vectorbase_interface::Request::SubmitData {
-            database_name: "test3".to_string(),
+            database_name: "test4".to_string(),
             values: vec![
                 ("id_001".to_string(), "Cats have retractable claws that help them climb and hunt.".to_string()),
                 ("id_002".to_string(), "Dogs are known for their loyalty and are often called man's best friend.".to_string()),
@@ -252,7 +252,7 @@ fn init(our: Address) {
     }
     {
         let request = vectorbase_interface::Request::SemanticSearch {
-            database_name: "test3".to_string(),
+            database_name: "test4".to_string(),
             top_k: 3,
             query: "What are cats like?".to_string(),
         };
