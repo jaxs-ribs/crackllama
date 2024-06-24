@@ -203,7 +203,21 @@ fn init(our: Address) {
 
     let mut state = State::default();
 
-    {
+
+    loop {
+        match handle_message(&our, &mut state) {
+            Ok(()) => {}
+            Err(e) => {
+                println!("error: {:?}", e);
+            }
+        };
+    }
+}
+
+
+// TODO: Zena: Strip these tests out into a script inside of command centers vectorbase
+fn temp_test() {
+    { // List Database
         let request = vectorbase_interface::Request::ListDatabases;
         let response = Request::to(VECTORBASE_ADDRESS)
             .body(serde_json::to_vec(&request).unwrap())
@@ -218,9 +232,7 @@ fn init(our: Address) {
             println!("ERROR: {:?}", response);
         }
     }
-    {
-        // TODO: Turn each of these into helpers but watch the unwraps
-        // Quick testing area
+    { // Submit Data
         let request = vectorbase_interface::Request::SubmitData {
             database_name: "test4".to_string(),
             values: vec![
@@ -250,7 +262,7 @@ fn init(our: Address) {
             println!("error: {:?}", response);
         }
     }
-    {
+    { // Semantic Search
         let request = vectorbase_interface::Request::SemanticSearch {
             database_name: "test4".to_string(),
             top_k: 3,
@@ -269,14 +281,5 @@ fn init(our: Address) {
         } else {
             println!("ERROR: {:?}", response);
         }
-    }
-
-    loop {
-        match handle_message(&our, &mut state) {
-            Ok(()) => {}
-            Err(e) => {
-                println!("error: {:?}", e);
-            }
-        };
     }
 }
