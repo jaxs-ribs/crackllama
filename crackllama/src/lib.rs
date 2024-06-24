@@ -88,7 +88,6 @@ fn handle_http_messages(msg: &Message, state: &mut State) -> anyhow::Result<()> 
     Ok(())
 }
 
-
 fn set_model(bytes: &[u8], current_model: &mut Model) -> anyhow::Result<()> {
     let index = serde_json::from_slice::<usize>(bytes)?;
     *current_model = Model::from_index(index);
@@ -152,7 +151,9 @@ fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn save_conversation(current_conversation: &mut CurrentConversation) -> anyhow::Result<()> {
+fn save_conversation(state: &mut State) -> anyhow::Result<()> {
+    // Send to vectorbase
+    let current_conversation = &state.current_conversation;
     let Some(title) = &current_conversation.title else {
         return Err(anyhow::anyhow!("No title found"));
     };
@@ -176,6 +177,10 @@ fn save_conversation(current_conversation: &mut CurrentConversation) -> anyhow::
         "Failed to save conversation".to_string()
     };
 
+    // Save state
+    state.conversations.push(current_conversation.clone());
+    state.save();
+
     http::send_response(
         http::StatusCode::OK,
         Some(HashMap::from([(
@@ -184,7 +189,7 @@ fn save_conversation(current_conversation: &mut CurrentConversation) -> anyhow::
         )])),
         status.as_bytes().to_vec(),
     );
-    clear(current_conversation);
+    clear(&mut state.current_conversation);
     Ok(())
 }
 
@@ -202,7 +207,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/list_models" => list_models(),
         "/set_model" => set_model(&bytes, &mut state.current_model),
         "/transcribe" => transcribe(bytes),
-        "/save_conversation" => save_conversation(&mut state.current_conversation),
+        "/save_conversation" => save_conversation(state),
         _ => Ok(()),
     }
 }
@@ -227,7 +232,7 @@ fn init(our: Address) {
         panic!("Error binding https paths: {:?}", e);
     }
 
-    let mut state = State::default();
+    let mut state = State::fetch().unwrap_or_default();
 
     temp_test();
 
