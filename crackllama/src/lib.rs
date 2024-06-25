@@ -177,6 +177,33 @@ fn fetch_conversations(state: &State) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn list_conversations(state: &State) -> anyhow::Result<()> {
+    let mut conversations: Vec<_> = state.conversations.iter()
+        .map(|(id, conv)| (id, conv.title.clone().unwrap_or_default(), conv.date_created))
+        .collect();
+    
+    conversations.sort_by(|a, b| b.2.cmp(&a.2));  // Sort by date_created in descending order
+    
+    let response = conversations.into_iter()
+        .map(|(id, title, _)| serde_json::json!({
+            "id": id,
+            "title": title
+        }))
+        .collect::<Vec<_>>();
+
+    let json = serde_json::to_string(&response)?;
+
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        json.as_bytes().to_vec(),
+    );
+    Ok(())
+}
+
 fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
         .request()
@@ -192,6 +219,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/prompt" => prompt(&bytes, state),
         "/transcribe" => transcribe(bytes),
         "/fetch_conversations" => fetch_conversations(state),
+        "/list_conversations" => list_conversations(state),
         _ => Ok(()),
     }
 }
@@ -211,6 +239,7 @@ fn init(our: Address) {
             "/prompt",
             "/transcribe",
             "/fetch_conversations",
+            "/list_conversations"
         ],
     ) {
         panic!("Error binding https paths: {:?}", e);
