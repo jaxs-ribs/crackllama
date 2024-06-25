@@ -91,7 +91,7 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
 
     update_conversation(&prompt.prompt, &answer, conversation)?;
 
-    let conversation_json = serde_json::to_string(&conversation)?;
+    let message_history = serde_json::to_string(&conversation.messages)?;
 
     http::send_response(
         http::StatusCode::OK,
@@ -99,7 +99,7 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
             "Content-Type".to_string(),
             "application/json".to_string(),
         )])),
-        conversation_json.as_bytes().to_vec(),
+        message_history.as_bytes().to_vec(),
     );
 
     state.save();
