@@ -11,6 +11,7 @@
 <body>
     <div id="conversationList"></div>
     <div>
+        <select id="modelSelect"></select>
         <textarea id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)"
             rows="1"></textarea>
         <button id="recordAudio">🎤</button>
@@ -177,6 +178,9 @@
         var index;
         var displayNextWord;
 
+        let currentModel = '';
+        let currentConversationId = null;
+
         let mediaRecorder;
         let audioChunks = [];
 
@@ -255,25 +259,55 @@
             }
         }
 
+        function fetchModels() {
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/list_models', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(models => {
+                const modelSelect = document.getElementById('modelSelect');
+                modelSelect.innerHTML = models.map(model => `<option value="${model}">${model}</option>`).join('');
+                currentModel = models[0];
+            })
+            .catch(error => console.error('Error fetching models:', error));
+        }
+
+        function newConversation() {
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/new_conversation', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                currentConversationId = data.id;
+                console.log('New conversation started with ID:', currentConversationId);
+            })
+            .catch(error => console.error('Error creating new conversation:', error));
+        }
+
         function sendPrompt() {
             const promptInput = document.getElementById('promptInput');
             const prompt = promptInput.value.trim();
-            if (prompt) {
+            if (prompt && currentConversationId) {
                 fetch('http://localhost:8080/crackllama:crackllama:template.os/prompt', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ prompt: prompt }),
+                    body: JSON.stringify({
+                        conversation_id: currentConversationId,
+                        model: currentModel,
+                        prompt: prompt
+                    }),
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        const lastMessage = data.messages[data.messages.length - 1];
-                        speedRead(lastMessage);
-                    })
-                    .catch((error) => {
-                        console.error('Error:', error);
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Prompt sent:', data);
+                    const lastMessage = data.messages[data.messages.length - 1];
+                    speedRead(lastMessage);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
                 promptInput.value = '';
             }
         }
@@ -281,21 +315,6 @@
         function autoExpand(element) {
             element.style.height = 'auto';
             element.style.height = (element.scrollHeight) + 'px';
-        }
-
-        function fetchConversationHistories() {
-            console.log('Fetching conversations...');
-            fetch('http://localhost:8080/crackllama:crackllama:template.os/fetch_conversations', {
-                method: 'POST',
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Fetched conversations:', data);
-                    displayConversations(data);
-                })
-                .catch(error => {
-                    console.error('Error fetching conversations:', error);
-                });
         }
 
         function displayConversations(conversations) {
@@ -316,7 +335,16 @@
             });
         }
 
-        window.addEventListener('load', fetchConversationHistories);
+        window.addEventListener('load', () => {
+            fetchModels();
+            newConversation();
+        });
+
+
+        document.getElementById('newConversation').addEventListener('click', newConversation);
+        document.getElementById('modelSelect').addEventListener('change', function() {
+            currentModel = this.value;
+        });
 
         document.getElementById('promptInput').addEventListener('input', function () {
             autoExpand(this);

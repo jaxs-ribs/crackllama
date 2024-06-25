@@ -70,21 +70,23 @@ fn handle_http_messages(msg: &Message, state: &mut State) -> anyhow::Result<()> 
 fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
     let Some(conversation) = state.conversations.get_mut(&prompt.conversation_id) else {
+        println!("Our available conversations are {:?}", state.conversations);
+        println!("But we got a prompt with conversation_id {:?}", prompt.conversation_id);
         http::send_response(
             http::StatusCode::INTERNAL_SERVER_ERROR,
             Some(HashMap::from([(
                 "Content-Type".to_string(),
                 "application/json".to_string(),
             )])),
-            "".as_bytes().to_vec(),
+            serde_json::to_vec(&serde_json::json!({"error": "Conversation not found"}))?,
         );
-        return Err(anyhow::anyhow!("Conversation not found"));
+        return Ok(());
     };
     
     let answer = get_groq_answer_with_history(
         &prompt.prompt,
         &conversation.messages.clone(),
-        &prompt.model.get_model_name(),
+        &prompt.model,
     )?;
 
     update_conversation(&prompt.prompt, &answer, conversation)?;
@@ -106,20 +108,22 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
 
 fn list_models() -> anyhow::Result<()> {
     let models = Model::available_models();
+    let json = serde_json::to_string(&models)?;
+
     http::send_response(
         http::StatusCode::OK,
         Some(HashMap::from([(
             "Content-Type".to_string(),
             "application/json".to_string(),
         )])),
-        serde_json::to_vec(&models)?,
+        json.as_bytes().to_vec(),
     );
     Ok(())
 }
 
 fn new_conversation(state: &mut State) -> anyhow::Result<()> {
     let new_id = loop {
-        let id = rand::random::<i64>();
+        let id = rand::random::<i32>();
         if !state.conversations.contains_key(&id) {
             break id;
         }
@@ -140,6 +144,7 @@ fn new_conversation(state: &mut State) -> anyhow::Result<()> {
         )])),
         serde_json::to_vec(&response)?,
     );
+    state.save();
     Ok(())
 }
 

@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct State {
-    pub conversations: HashMap<i64, Conversation>,
+    pub conversations: HashMap<i32, Conversation>,
 }
 
 impl State {
@@ -84,7 +84,7 @@ impl Default for Model {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Prompt {
+    pub conversation_id: i32,
+    pub model: String,
     pub prompt: String,
-    pub model: Model,
-    pub conversation_id: i64, 
 }
