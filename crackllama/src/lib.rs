@@ -162,21 +162,6 @@ fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn fetch_conversations(state: &State) -> anyhow::Result<()> {
-    let conversations = &state.conversations;
-    let json = serde_json::to_string(&conversations)?;
-
-    http::send_response(
-        http::StatusCode::OK,
-        Some(HashMap::from([(
-            "Content-Type".to_string(),
-            "application/json".to_string(),
-        )])),
-        json.as_bytes().to_vec(),
-    );
-    Ok(())
-}
-
 fn list_conversations(state: &State) -> anyhow::Result<()> {
     let mut conversations: Vec<_> = state.conversations.iter()
         .map(|(id, conv)| (id, conv.title.clone().unwrap_or_default(), conv.date_created))
@@ -243,7 +228,6 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/new_conversation" => new_conversation(state),
         "/prompt" => prompt(&bytes, state),
         "/transcribe" => transcribe(bytes),
-        "/fetch_conversations" => fetch_conversations(state),
         "/list_conversations" => list_conversations(state),
         "/get_conversation" => get_conversation(&bytes, state),
         _ => Ok(()),
@@ -264,7 +248,6 @@ fn init(our: Address) {
             "/new_conversation",
             "/prompt",
             "/transcribe",
-            "/fetch_conversations",
             "/list_conversations", 
             "/get_conversation",
         ],
