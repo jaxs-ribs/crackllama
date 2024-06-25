@@ -3,6 +3,36 @@ use kinode_process_lib::{
 };
 use serde::{Deserialize, Serialize};
 
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct State {
+    pub current_conversation: CurrentConversation,
+    pub current_model: Model,
+    pub conversations: Vec<CurrentConversation>,
+}
+
+impl State {
+    pub fn fetch() -> Option<State> {
+        if let Some(state_bytes) = get_state() {
+            bincode::deserialize(&state_bytes).ok()
+        } else {
+            None
+        }
+    }
+
+    pub fn save(&self) {
+        let serialized_state = bincode::serialize(self).expect("Failed to serialize state");
+        set_state(&serialized_state);
+    }
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct CurrentConversation {
+    pub title: Option<String>,
+    /// Note that every even number is going to be a question, and every odd number is going to be an answer
+    pub messages: Vec<String>,
+    pub date_created: Option<i64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Model {
     Llama38B,
@@ -42,34 +72,4 @@ impl Default for Model {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Prompt {
     pub prompt: String,
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct State {
-    pub current_conversation: CurrentConversation,
-    pub current_model: Model,
-    pub conversations: Vec<CurrentConversation>,
-}
-
-impl State {
-    pub fn fetch() -> Option<State> {
-        if let Some(state_bytes) = get_state() {
-            bincode::deserialize(&state_bytes).ok()
-        } else {
-            None
-        }
-    }
-
-    pub fn save(&self) {
-        let serialized_state = bincode::serialize(self).expect("Failed to serialize state");
-        set_state(&serialized_state);
-    }
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct CurrentConversation {
-    pub title: Option<String>,
-    /// Note that every even number is going to be a question, and every odd number is going to be an answer
-    pub messages: Vec<String>,
-    pub date_created: Option<i64>,
 }
