@@ -255,8 +255,6 @@
             }
         }
 
-        let conversationHistory;
-
         function sendPrompt() {
             const promptInput = document.getElementById('promptInput');
             const prompt = promptInput.value.trim();
@@ -270,7 +268,6 @@
                 })
                     .then(response => response.json())
                     .then(data => {
-                        conversationHistory = data;
                         const lastMessage = data.messages[data.messages.length - 1];
                         speedRead(lastMessage);
                     })
@@ -299,7 +296,7 @@
                 });
         }
 
-        function fetchConversations() {
+        function fetchConversationHistories() {
             console.log('Fetching conversations...');
             fetch('http://localhost:8080/crackllama:crackllama:template.os/fetch_conversations', {
                 method: 'POST',
@@ -332,7 +329,7 @@
             });
         }
 
-        window.addEventListener('load', fetchConversations);
+        window.addEventListener('load', fetchConversationHistories);
 
         document.getElementById('promptInput').addEventListener('input', function () {
             autoExpand(this);
