@@ -32,7 +32,7 @@ fn update_conversation(
     conversation.messages.push(prompt.to_string());
     conversation.messages.push(answer.to_string());
 
-    if conversation.messages.len() == 4 {
+    if conversation.messages.len() == 2 {
         let summary_prompt = format!("Given the following conversation: {:?}, summarize the topic in 80 words or less. Only output the title, do not explain yourself.", conversation.messages);
         let summary_answer = get_groq_answer(&summary_prompt, &Model::Llama38B.get_model_name())?;
         conversation.title = Some(summary_answer);
