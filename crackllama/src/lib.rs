@@ -13,8 +13,8 @@ use llm::*;
 mod stt;
 use stt::*;
 
-mod temp;
-use temp::*;
+// mod temp;
+// use temp::*;
 
 wit_bindgen::generate!({
     path: "wit",
@@ -24,38 +24,27 @@ wit_bindgen::generate!({
 pub const VECTORBASE_ADDRESS: (&str, &str, &str, &str) =
     ("our", "vectorbase", "command_center", "appattacc.os");
 
-// TODO: These are helper functions
-pub fn is_new(current_conversation: &CurrentConversation) -> bool {
-    current_conversation.messages.len() == 2
-        && current_conversation.date_created.is_none()
-        && current_conversation.title.is_none()
-}
-
-pub fn clear(current_conversation: &mut CurrentConversation) {
-    current_conversation.title = None;
-    current_conversation.messages = vec![];
-    current_conversation.date_created = None;
-}
-
 fn update_conversation(
     prompt: &str,
     answer: &str,
-    current_conversation: &mut CurrentConversation,
+    conversation: &mut Conversation,
 ) -> anyhow::Result<()> {
-    current_conversation.messages.push(prompt.to_string());
-    current_conversation.messages.push(answer.to_string());
-
-    if is_new(current_conversation) {
+    if conversation.messages.len() == 0 {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs() as i64;
 
-        current_conversation.date_created = Some(now);
+        conversation.date_created = Some(now);
+    }
 
-        let summary_prompt = format!("Given the following conversation: {:?}, summarize the topic in 80 words or less. Only output the title, do not explain yourself.", current_conversation.messages);
+    conversation.messages.push(prompt.to_string());
+    conversation.messages.push(answer.to_string());
+
+    if conversation.messages.len() == 4 {
+        let summary_prompt = format!("Given the following conversation: {:?}, summarize the topic in 80 words or less. Only output the title, do not explain yourself.", conversation.messages);
         let summary_answer = get_groq_answer(&summary_prompt, &Model::Llama38B.get_model_name())?;
-        current_conversation.title = Some(summary_answer);
+        conversation.title = Some(summary_answer);
     }
 
     Ok(())
@@ -88,32 +77,29 @@ fn handle_http_messages(msg: &Message, state: &mut State) -> anyhow::Result<()> 
     Ok(())
 }
 
-fn set_model(bytes: &[u8], current_model: &mut Model) -> anyhow::Result<()> {
-    let index = serde_json::from_slice::<usize>(bytes)?;
-    *current_model = Model::from_index(index);
-
-    http::send_response(
-        http::StatusCode::OK,
-        Some(HashMap::from([(
-            "Content-Type".to_string(),
-            "application/json".to_string(),
-        )])),
-        "success".to_string().as_bytes().to_vec(),
-    );
-    Ok(())
-}
-
 fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
+    let Some(conversation) = state.conversations.get_mut(&prompt.conversation_id) else {
+        http::send_response(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            Some(HashMap::from([(
+                "Content-Type".to_string(),
+                "application/json".to_string(),
+            )])),
+            "".as_bytes().to_vec(),
+        );
+        return Err(anyhow::anyhow!("Conversation not found"));
+    };
+    
     let answer = get_groq_answer_with_history(
         &prompt.prompt,
-        &state.current_conversation.messages,
-        &state.current_model.get_model_name(),
+        &conversation.messages.clone(),
+        &prompt.model.get_model_name(),
     )?;
 
-    update_conversation(&prompt.prompt, &answer, &mut state.current_conversation)?;
+    update_conversation(&prompt.prompt, &answer, conversation)?;
 
-    let conversation_json = serde_json::to_string(&state.current_conversation)?;
+    let conversation_json = serde_json::to_string(&conversation)?;
 
     http::send_response(
         http::StatusCode::OK,
@@ -123,6 +109,8 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
         )])),
         conversation_json.as_bytes().to_vec(),
     );
+
+    state.save();
     Ok(())
 }
 
@@ -153,48 +141,6 @@ fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn save_conversation(state: &mut State) -> anyhow::Result<()> {
-    // Send to vectorbase
-    let current_conversation = &state.current_conversation;
-    let Some(title) = &current_conversation.title else {
-        return Err(anyhow::anyhow!("No title found"));
-    };
-
-    let joined_messages = current_conversation.messages.join("\n");
-    let values: Vec<(String, String)> = vec![(title.clone(), joined_messages)];
-
-    let request = vectorbase_interface::Request::SubmitData {
-        database_name: "crackllama".to_string(),
-        values,
-    };
-    let response = Request::to(VECTORBASE_ADDRESS)
-        .body(serde_json::to_vec(&request).unwrap())
-        .send_and_await_response(8)??;
-
-    let status = if let vectorbase_interface::Response::SubmitData =
-        serde_json::from_slice(&response.body())?
-    {
-        "Success".to_string()
-    } else {
-        "Failed to save conversation".to_string()
-    };
-
-    // Save state
-    state.conversations.push(current_conversation.clone());
-    state.save();
-
-    http::send_response(
-        http::StatusCode::OK,
-        Some(HashMap::from([(
-            "Content-Type".to_string(),
-            "text/plain".to_string(),
-        )])),
-        status.as_bytes().to_vec(),
-    );
-    clear(&mut state.current_conversation);
-    Ok(())
-}
-
 fn fetch_conversations(state: &State) -> anyhow::Result<()> {
     let conversations = &state.conversations;
     let json = serde_json::to_string(&conversations)?;
@@ -210,7 +156,6 @@ fn fetch_conversations(state: &State) -> anyhow::Result<()> {
     Ok(())
 }
 
-
 fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
         .request()
@@ -223,9 +168,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     match path.as_str() {
         "/prompt" => prompt(&bytes, state),
         "/list_models" => list_models(),
-        "/set_model" => set_model(&bytes, &mut state.current_model),
         "/transcribe" => transcribe(bytes),
-        "/save_conversation" => save_conversation(state),
         "/fetch_conversations" => fetch_conversations(state),
         _ => Ok(()),
     }
@@ -243,9 +186,7 @@ fn init(our: Address) {
             "/",
             "/prompt",
             "/list_models",
-            "/set_model",
             "/transcribe",
-            "/save_conversation",
             "/fetch_conversations",
         ],
     ) {

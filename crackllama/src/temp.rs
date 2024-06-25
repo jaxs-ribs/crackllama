@@ -2,7 +2,7 @@ use kinode_process_lib::{println, Request};
 use crate::VECTORBASE_ADDRESS;
 
 // TODO: Zena: Strip these tests out into a script inside of command centers vectorbase
-pub fn temp_test() {
+pub fn _temp_test() {
     {
         // List Database
         let request = vectorbase_interface::Request::ListDatabases;

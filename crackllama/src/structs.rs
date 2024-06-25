@@ -1,13 +1,12 @@
 use kinode_process_lib::{
     get_state, set_state,
 };
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct State {
-    pub current_conversation: CurrentConversation,
-    pub current_model: Model,
-    pub conversations: Vec<CurrentConversation>,
+    pub conversations: HashMap<i64, Conversation>,
 }
 
 impl State {
@@ -26,7 +25,7 @@ impl State {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct CurrentConversation {
+pub struct Conversation {
     pub title: Option<String>,
     /// Note that every even number is going to be a question, and every odd number is going to be an answer
     pub messages: Vec<String>,
@@ -40,7 +39,7 @@ pub enum Model {
 }
 
 impl Model {
-    pub fn from_index(index: usize) -> Self {
+    pub fn _from_index(index: usize) -> Self {
         match index {
             0 => Model::Llama38B,
             1 => Model::Llama370B,
@@ -72,4 +71,6 @@ impl Default for Model {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Prompt {
     pub prompt: String,
+    pub model: Model,
+    pub conversation_id: i64, 
 }

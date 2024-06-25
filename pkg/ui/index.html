@@ -283,19 +283,6 @@
             element.style.height = (element.scrollHeight) + 'px';
         }
 
-        function saveConversation() {
-            fetch('http://localhost:8080/crackllama:crackllama:template.os/save_conversation', {
-                method: 'POST',
-            })
-                .then(response => response.text())
-                .then(data => {
-                    console.log('Conversation saved:', data);
-                })
-                .catch((error) => {
-                    console.error('Error saving conversation:', error);
-                });
-        }
-
         function fetchConversationHistories() {
             console.log('Fetching conversations...');
             fetch('http://localhost:8080/crackllama:crackllama:template.os/fetch_conversations', {
@@ -358,10 +345,6 @@
         });
 
         document.getElementById('recordAudio').addEventListener('click', toggleRecording);
-
-        document.getElementById('newConversation').addEventListener('click', saveConversation);
-
-        window.addEventListener('beforeunload', saveConversation);
 
         let audioStream;
 
