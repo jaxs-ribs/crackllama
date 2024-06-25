@@ -2,7 +2,7 @@ use kinode_process_lib::{
     await_message, call_init, get_blob, http, println, Address, Message, Request,
 };
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
+use rand;
 
 mod structs;
 use structs::*;
@@ -29,15 +29,6 @@ fn update_conversation(
     answer: &str,
     conversation: &mut Conversation,
 ) -> anyhow::Result<()> {
-    if conversation.messages.len() == 0 {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
-
-        conversation.date_created = Some(now);
-    }
-
     conversation.messages.push(prompt.to_string());
     conversation.messages.push(answer.to_string());
 
@@ -49,7 +40,6 @@ fn update_conversation(
 
     Ok(())
 }
-// TODO: /endtodo
 
 fn handle_message(our: &Address, state: &mut State) -> anyhow::Result<()> {
     let msg = await_message()?;
@@ -127,6 +117,32 @@ fn list_models() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn new_conversation(state: &mut State) -> anyhow::Result<()> {
+    let new_id = loop {
+        let id = rand::random::<i64>();
+        if !state.conversations.contains_key(&id) {
+            break id;
+        }
+    };
+
+    let new_conversation = Conversation::default();
+    state.conversations.insert(new_id, new_conversation);
+
+    let response = serde_json::json!({
+        "id": new_id
+    });
+
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        serde_json::to_vec(&response)?,
+    );
+    Ok(())
+}
+
 fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
     let transcript = get_text(bytes)?;
 
@@ -166,8 +182,9 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         .bytes;
 
     match path.as_str() {
-        "/prompt" => prompt(&bytes, state),
         "/list_models" => list_models(),
+        "/new_conversation" => new_conversation(state),
+        "/prompt" => prompt(&bytes, state),
         "/transcribe" => transcribe(bytes),
         "/fetch_conversations" => fetch_conversations(state),
         _ => Ok(()),
@@ -184,8 +201,9 @@ fn init(our: Address) {
         true,
         vec![
             "/",
-            "/prompt",
             "/list_models",
+            "/new_conversation",
+            "/prompt",
             "/transcribe",
             "/fetch_conversations",
         ],

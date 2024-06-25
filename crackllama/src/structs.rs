@@ -3,6 +3,7 @@ use kinode_process_lib::{
 };
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct State {
@@ -24,14 +25,27 @@ impl State {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversation {
     pub title: Option<String>,
     /// Note that every even number is going to be a question, and every odd number is going to be an answer
     pub messages: Vec<String>,
-    pub date_created: Option<i64>,
+    pub date_created: i64,
 }
 
+impl Default for Conversation {
+    fn default() -> Self {
+        let date_created = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        Self {
+            title: None,
+            messages: vec![],
+            date_created,
+        }
+    }
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Model {
     Llama38B,

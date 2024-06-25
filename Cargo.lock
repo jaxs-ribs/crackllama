@@ -420,6 +420,7 @@ dependencies = [
  "bincode",
  "kinode_process_lib",
  "llm_interface",
+ "rand",
  "serde",
  "serde_json",
  "storage_interface",
