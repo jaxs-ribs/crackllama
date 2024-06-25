@@ -9,20 +9,26 @@
 </head>
 
 <body>
-    <div id="conversationList"></div>
-    <div>
-        <select id="modelSelect"></select>
-        <textarea id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)"
-            rows="1"></textarea>
-        <button id="recordAudio">🎤</button>
+    <div id="sidebar">
+        <h3>Conversations</h3>
+        <div id="conversationList"></div>
         <button id="newConversation">New Conversation</button>
     </div>
-    <div id="wpmControls">
-        <button id="decreaseWpm" style="margin-right: 5px;">&lt;</button>
-        <span id="wpmDisplay">600</span> WPM
-        <button id="increaseWpm" style="margin-left: 5px;">&gt;</button>
+    <div id="mainContent">
+        <div>
+            <select id="modelSelect"></select>
+            <textarea id="promptInput" placeholder="Enter your prompt" onkeypress="handleKeyPress(event)"
+                rows="1"></textarea>
+            <button id="recordAudio">🎤</button>
+            <button id="newConversation">New Conversation</button>
+        </div>
+        <div id="wpmControls">
+            <button id="decreaseWpm" style="margin-right: 5px;">&lt;</button>
+            <span id="wpmDisplay">600</span> WPM
+            <button id="increaseWpm" style="margin-left: 5px;">&gt;</button>
+        </div>
+        <div id="answerDisplay"></div>
     </div>
-    <div id="answerDisplay"></div>
 
     <style>
         body {
@@ -51,47 +57,46 @@
             height: 9vh;
         }
 
-        #conversationList {
+        #sidebar {
             position: fixed;
-            left: 10px;
-            top: 10px;
+            left: 0;
+            top: 0;
             width: 200px;
-            max-height: calc(100vh - 20px);
-            overflow-y: auto;
+            height: 100vh;
             background-color: #272727;
-            border-radius: 5px;
-            padding: 10px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #conversationList {
+            margin-bottom: 20px;
         }
 
         #conversationList button {
             display: block;
             width: 100%;
-            padding: 5px;
-            margin-bottom: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
             background-color: #333;
             color: #ddd;
             border: none;
-            border-radius: 3px;
+            border-radius: 5px;
             cursor: pointer;
             text-align: left;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
-        #conversationList button:hover {
-            background-color: #444;
+        #mainContent {
+            margin-left: 220px;
+            padding: 20px;
         }
 
         #newConversation {
-            position: fixed;
-            bottom: 10px;
-            right: 60px;
-            background-color: #272727;
-            color: rgb(221, 221, 221);
-            border: none;
-            border-radius: 20px;
+            width: 100%;
             padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
         }
 
@@ -263,25 +268,29 @@
             fetch('http://localhost:8080/crackllama:crackllama:template.os/list_models', {
                 method: 'POST',
             })
-            .then(response => response.json())
-            .then(models => {
-                const modelSelect = document.getElementById('modelSelect');
-                modelSelect.innerHTML = models.map(model => `<option value="${model}">${model}</option>`).join('');
-                currentModel = models[0];
-            })
-            .catch(error => console.error('Error fetching models:', error));
+                .then(response => response.json())
+                .then(models => {
+                    const modelSelect = document.getElementById('modelSelect');
+                    modelSelect.innerHTML = models.map(model => `<option value="${model}">${model}</option>`).join('');
+                    currentModel = models[0];
+                })
+                .catch(error => console.error('Error fetching models:', error));
         }
 
         function newConversation() {
             fetch('http://localhost:8080/crackllama:crackllama:template.os/new_conversation', {
                 method: 'POST',
             })
-            .then(response => response.json())
-            .then(data => {
-                currentConversationId = data.id;
-                console.log('New conversation started with ID:', currentConversationId);
-            })
-            .catch(error => console.error('Error creating new conversation:', error));
+                .then(response => response.json())
+                .then(data => {
+                    currentConversationId = data.id;
+                    console.log('New conversation started with ID:', currentConversationId);
+                    // Clear the answer display
+                    document.getElementById('answerDisplay').innerHTML = '';
+                    // Fetch the updated list of conversations
+                    fetchConversations();
+                })
+                .catch(error => console.error('Error creating new conversation:', error));
         }
 
         function sendPrompt() {
@@ -299,50 +308,81 @@
                         prompt: prompt
                     }),
                 })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Prompt sent:', data);
-                    const lastMessage = data.messages[data.messages.length - 1];
-                    speedRead(lastMessage);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Prompt sent:', data);
+                        const lastMessage = data.messages[data.messages.length - 1];
+                        speedRead(lastMessage);
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                    });
                 promptInput.value = '';
             }
         }
 
-        function autoExpand(element) {
-            element.style.height = 'auto';
-            element.style.height = (element.scrollHeight) + 'px';
+        function fetchConversations() {
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/list_conversations', {
+                method: 'POST',
+            })
+                .then(response => response.json())
+                .then(conversations => {
+                    displayConversations(conversations);
+                })
+                .catch(error => console.error('Error fetching conversations:', error));
         }
 
         function displayConversations(conversations) {
             const conversationList = document.getElementById('conversationList');
             conversationList.innerHTML = '';
 
-            // Sort conversations by date (assuming each conversation has a 'date' property)
-            conversations.sort((a, b) => new Date(b.date) - new Date(a.date));
-
             conversations.forEach(conversation => {
                 const button = document.createElement('button');
-                button.textContent = conversation.title;
-                button.onclick = () => {
-                    // Function to load conversation will be added here later
-                    console.log('Load conversation:', conversation.id);
-                };
+                button.textContent = conversation.title || 'Untitled';
+                button.onclick = () => loadConversation(conversation.id);
                 conversationList.appendChild(button);
             });
         }
 
+        function loadConversation(id) {
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/get_conversation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(id)
+            })
+                .then(response => response.json())
+                .then(messages => {
+                    currentConversationId = id;
+                    // Clear the answer display
+                    document.getElementById('answerDisplay').innerHTML = '';
+                    // Display the messages (you may want to format this better)
+                    messages.forEach(message => {
+                        const messageElement = document.createElement('div');
+                        messageElement.textContent = `${message.role}: ${message.content}`;
+                        document.getElementById('answerDisplay').appendChild(messageElement);
+                    });
+                })
+                .catch(error => console.error('Error loading conversation:', error));
+        }
+
+
+        function autoExpand(element) {
+            element.style.height = 'auto';
+            element.style.height = (element.scrollHeight) + 'px';
+        }
+
+
         window.addEventListener('load', () => {
             fetchModels();
+            fetchConversations();
             newConversation();
         });
 
 
         document.getElementById('newConversation').addEventListener('click', newConversation);
-        document.getElementById('modelSelect').addEventListener('change', function() {
+        document.getElementById('modelSelect').addEventListener('change', function () {
             currentModel = this.value;
         });
 
