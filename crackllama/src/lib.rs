@@ -13,8 +13,8 @@ use llm::*;
 mod stt;
 use stt::*;
 
-// mod temp;
-// use temp::*;
+mod temp;
+use temp::*;
 
 wit_bindgen::generate!({
     path: "wit",
@@ -257,7 +257,7 @@ fn init(our: Address) {
 
     let mut state = State::fetch().unwrap_or_default();
 
-    // temp_test(); TODO: Zena: Remove
+    // temp_test(); 
 
     loop {
         match handle_message(&our, &mut state) {
