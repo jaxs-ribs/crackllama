@@ -204,6 +204,31 @@ fn list_conversations(state: &State) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn get_conversation(bytes: &[u8], state: &State) -> anyhow::Result<()> {
+    let conversation_id: i32 = serde_json::from_slice(bytes)?;
+    
+    if let Some(conversation) = state.conversations.get(&conversation_id) {
+        http::send_response(
+            http::StatusCode::OK,
+            Some(HashMap::from([(
+                "Content-Type".to_string(),
+                "application/json".to_string(),
+            )])),
+            serde_json::to_vec(&conversation.messages)?,
+        );
+    } else {
+        http::send_response(
+            http::StatusCode::NOT_FOUND,
+            Some(HashMap::from([(
+                "Content-Type".to_string(),
+                "application/json".to_string(),
+            )])),
+            serde_json::to_vec(&serde_json::json!({"error": "Conversation not found"}))?,
+        );
+    }
+    Ok(())
+}
+
 fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
         .request()
@@ -220,6 +245,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/transcribe" => transcribe(bytes),
         "/fetch_conversations" => fetch_conversations(state),
         "/list_conversations" => list_conversations(state),
+        "/get_conversation" => get_conversation(&bytes, state),
         _ => Ok(()),
     }
 }
@@ -239,7 +265,8 @@ fn init(our: Address) {
             "/prompt",
             "/transcribe",
             "/fetch_conversations",
-            "/list_conversations"
+            "/list_conversations", 
+            "/get_conversation",
         ],
     ) {
         panic!("Error binding https paths: {:?}", e);
