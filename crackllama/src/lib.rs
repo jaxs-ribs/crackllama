@@ -269,20 +269,40 @@ fn delete_conversation(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
 }
 
 fn search(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
-    let search_query: String = serde_json::from_slice(bytes)?;
+    let query: String = serde_json::from_slice(bytes)?;
+    println!("Searching for {:?}", query);
 
-    let dummy_results: Vec<i32> = vec![1, 2, 3, 4, 5];
+    let request = vectorbase_interface::Request::SemanticSearch {
+        database_name: VECTORBASE_DATABASE_NAME.to_string(),
+        top_k: 50,
+        query,
+    };
 
-    http::send_response(
-        http::StatusCode::OK,
-        Some(HashMap::from([(
-            "Content-Type".to_string(),
-            "application/json".to_string(),
-        )])),
-        serde_json::to_vec(&dummy_results)?,
-    );
+    let response = Request::to(VECTORBASE_ADDRESS)
+        .body(serde_json::to_vec(&request).unwrap())
+        .send_and_await_response(30)
+        .unwrap()
+        .unwrap();
+    println!("Request sent!");
 
-    Ok(())
+    if let Ok(vectorbase_interface::Response::SemanticSearch(results)) =
+        serde_json::from_slice(
+            response.body(),
+    ) {
+        println!("Results: {:?}", results);
+        http::send_response(
+            http::StatusCode::OK,
+            Some(HashMap::from([(
+                "Content-Type".to_string(),
+                "application/json".to_string(),
+            )])),
+            serde_json::to_vec(&results)?,
+        );
+
+        return Ok(());
+    }
+
+    return Err(anyhow::anyhow!("Failed to parse search results"));
 }
 
 fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
