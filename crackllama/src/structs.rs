@@ -19,7 +19,7 @@ impl State {
         }
     }
 
-    pub fn save(&self) {
+    pub fn save(&mut self) {
         // Remove conversations with no messages
         self.conversations.retain(|_, conversation| !conversation.messages.is_empty());
         let serialized_state = bincode::serialize(self).expect("Failed to serialize state");
