@@ -162,7 +162,6 @@ fn new_conversation(state: &mut State) -> anyhow::Result<()> {
         )])),
         serde_json::to_vec(&response)?,
     );
-    state.save();
     Ok(())
 }
 
@@ -184,6 +183,7 @@ fn list_conversations(state: &State) -> anyhow::Result<()> {
     let mut conversations: Vec<_> = state
         .conversations
         .iter()
+        .filter(|(_, conv)| !conv.messages.is_empty())
         .map(|(id, conv)| {
             (
                 id,
@@ -289,14 +289,15 @@ fn search(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
         serde_json::from_slice(
             response.body(),
     ) {
-        println!("Results: {:?}", results);
+        let ids: Vec<i32> = results.iter().map(|r| r.0.parse::<i32>().unwrap_or_default()).collect();
+        println!("Results: {:?}", ids);
         http::send_response(
             http::StatusCode::OK,
             Some(HashMap::from([(
                 "Content-Type".to_string(),
                 "application/json".to_string(),
             )])),
-            serde_json::to_vec(&results)?,
+            serde_json::to_vec(&ids)?,
         );
 
         return Ok(());
