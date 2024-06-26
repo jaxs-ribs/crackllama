@@ -236,29 +236,40 @@
                 window.speedReadingActive = false;
                 const display = document.getElementById('answerDisplay');
                 display.classList.remove('centered');
-                displayMessagesAsChat(originalText);
+                displayMessagesAsChat(window.fullConversation);
             }
+        }
+
+        function endSpeedReading() {
+            window.speedReadingActive = false;
+            const display = document.getElementById('answerDisplay');
+            display.classList.remove('centered');
+            displayMessagesAsChat(window.fullConversation);
         }
 
         function displayMessagesAsChat(messages) {
             console.log('Displaying messages:', messages); // Debug log
             const display = document.getElementById('answerDisplay');
+            console.log('Display element:', display); // Debug log
             display.innerHTML = ''; // Clear previous messages
-
+        
             messages.forEach((message, index) => {
                 console.log(`Rendering message ${index}:`, message); // Debug log
                 const messageElement = document.createElement('div');
                 messageElement.className = index % 2 === 0 ? 'user-message' : 'system-message';
-                messageElement.textContent = message;
-
-                // Force layout recalculation
-                display.offsetHeight;
-
+                
+                // Check if message is an object or a string
+                if (typeof message === 'object' && message !== null) {
+                    messageElement.textContent = message.content || JSON.stringify(message);
+                } else {
+                    messageElement.textContent = message;
+                }
+            
+                console.log('Created message element:', messageElement); // Debug log
                 display.appendChild(messageElement);
-
-                // Scroll into view
-                messageElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
             });
+        
+            console.log('Final display content:', display.innerHTML); // Debug log
         }
 
         function speedRead(text) {
@@ -299,9 +310,7 @@
                     const delay = (60 / wpm) * 1000 * (wordLength / averageWordLength);
                     speedReadTimeout = setTimeout(displayNextWord, delay);
                 } else {
-                    window.speedReadingActive = false;
-                    display.classList.remove('centered');
-                    display.innerHTML = `<span class="fullText">${originalText}</span>`;
+                    endSpeedReading();
                 }
             };
             displayNextWord();
@@ -333,15 +342,13 @@
                     .then(data => {
                         console.log('Prompt sent:', data);
                         if (Array.isArray(data)) {
-                            console.log('Data:', data);
-                            displayMessagesAsChat(data);
                             const lastMessage = data[data.length - 1];
-                            console.log('Last message:', lastMessage); // Debug log
                             if (lastMessage) {
-                                speedRead(lastMessage);
+                                speedRead(lastMessage.content || JSON.stringify(lastMessage));
                             } else {
                                 console.error('No last message to speed read');
                             }
+                            window.fullConversation = data;
                         } else {
                             console.error('Unexpected response format:', data);
                         }
