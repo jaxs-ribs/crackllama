@@ -478,9 +478,18 @@
             const conversationList = document.getElementById('conversationList');
             conversationList.innerHTML = '';
         
+            // Sort conversations based on allowedConversationIds order
+            if (allowedConversationIds.length > 0) {
+                conversations.sort((a, b) => {
+                    const indexA = allowedConversationIds.indexOf(a.id);
+                    const indexB = allowedConversationIds.indexOf(b.id);
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
+                    return indexA - indexB;
+                });
+            }
+        
             conversations.forEach(conversation => {
-                // Only display conversations that are in the allowedConversationIds list
-                // or display all if the list is empty
                 if (allowedConversationIds.length === 0 || allowedConversationIds.includes(conversation.id)) {
                     const container = document.createElement('div');
                     container.className = 'conversation-container';
