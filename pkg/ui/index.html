@@ -10,6 +10,7 @@
 
 <body>
     <div id="sidebar">
+        <input type="text" id="searchBar" placeholder="Search conversations" onkeypress="handleSearchKeyPress(event)">
         <h3>Conversations</h3>
         <div id="conversationList"></div>
         <button id="newConversation">New Conversation</button>
@@ -55,6 +56,16 @@
             overflow: hidden;
             box-sizing: border-box;
             height: 9vh;
+        }
+
+        #searchBar {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #333;
+            color: #ddd;
+            border: none;
+            border-radius: 5px;
         }
 
         #sidebar {
@@ -253,6 +264,35 @@
         let audioChunks = [];
         let audioStream;
 
+        let allowedConversationIds = [];
+
+        function handleSearchKeyPress(event) {
+            if (event.key === 'Enter') {
+                const searchTerm = event.target.value.trim();
+                if (searchTerm) {
+                    searchConversations(searchTerm);
+                } else {
+                    clearSearchFilter();
+                }
+            }
+        }
+    
+        function searchConversations(searchTerm) {
+            fetch('http://localhost:8080/crackllama:crackllama:template.os/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(searchTerm)
+            })
+            .then(response => response.json())
+            .then(data => {
+                allowedConversationIds = data;
+                fetchConversations();
+            })
+            .catch(error => console.error('Error searching conversations:', error));
+        }
+
         function pauseContinueSpeedRead() {
             if (window.speedReadingActive) {
                 if (isPaused) {
@@ -275,6 +315,12 @@
             }
         }
 
+        function clearSearchFilter() {
+            allowedConversationIds = [];
+            fetchConversations();
+            document.getElementById('searchBar').value = ''; 
+        }
+
         function endSpeedReading() {
             window.speedReadingActive = false;
             const display = document.getElementById('answerDisplay');
@@ -283,13 +329,10 @@
         }
 
         function displayMessagesAsChat(messages) {
-            console.log('Displaying messages:', messages); // Debug log
             const display = document.getElementById('answerDisplay');
-            console.log('Display element:', display); // Debug log
             display.innerHTML = ''; // Clear previous messages
         
             messages.forEach((message, index) => {
-                console.log(`Rendering message ${index}:`, message); // Debug log
                 const messageElement = document.createElement('div');
                 messageElement.className = index % 2 === 0 ? 'user-message' : 'system-message';
                 
@@ -300,11 +343,8 @@
                     messageElement.textContent = message;
                 }
             
-                console.log('Created message element:', messageElement); // Debug log
                 display.appendChild(messageElement);
             });
-        
-            console.log('Final display content:', display.innerHTML); // Debug log
         }
 
         function speedRead(text) {
@@ -375,7 +415,6 @@
                 })
                     .then(response => response.json())
                     .then(data => {
-                        console.log('Prompt sent:', data);
                         if (Array.isArray(data)) {
                             const lastMessage = data[data.length - 1];
                             if (lastMessage) {
@@ -410,16 +449,14 @@
         }
 
         function newConversation() {
+            clearSearchFilter();
             fetch('http://localhost:8080/crackllama:crackllama:template.os/new_conversation', {
                 method: 'POST',
             })
                 .then(response => response.json())
                 .then(data => {
                     currentConversationId = data.id;
-                    console.log('New conversation started with ID:', currentConversationId);
-                    // Clear the answer display
                     document.getElementById('answerDisplay').innerHTML = '';
-                    // Fetch the updated list of conversations
                     fetchConversations();
                 })
                 .catch(error => console.error('Error creating new conversation:', error));
@@ -442,24 +479,28 @@
             conversationList.innerHTML = '';
         
             conversations.forEach(conversation => {
-                const container = document.createElement('div');
-                container.className = 'conversation-container';
-        
-                const button = document.createElement('button');
-                button.textContent = conversation.title || 'Untitled';
-                button.onclick = () => loadConversation(conversation.id);
-        
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = '🗑️';
-                deleteButton.className = 'delete-button';
-                deleteButton.onclick = (e) => {
-                    e.stopPropagation();
-                    deleteConversation(conversation.id);
-                };
-        
-                container.appendChild(button);
-                container.appendChild(deleteButton);
-                conversationList.appendChild(container);
+                // Only display conversations that are in the allowedConversationIds list
+                // or display all if the list is empty
+                if (allowedConversationIds.length === 0 || allowedConversationIds.includes(conversation.id)) {
+                    const container = document.createElement('div');
+                    container.className = 'conversation-container';
+            
+                    const button = document.createElement('button');
+                    button.textContent = conversation.title || 'Untitled';
+                    button.onclick = () => loadConversation(conversation.id);
+            
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = '🗑️';
+                    deleteButton.className = 'delete-button';
+                    deleteButton.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteConversation(conversation.id);
+                    };
+            
+                    container.appendChild(button);
+                    container.appendChild(deleteButton);
+                    conversationList.appendChild(container);
+                }
             });
         }
         
@@ -475,7 +516,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        console.log('Conversation deleted successfully');
                         fetchConversations(); // Refresh the conversation list
                     } else {
                         console.error('Failed to delete conversation:', data.error);
@@ -495,7 +535,6 @@
             })
                 .then(response => response.json())
                 .then(messages => {
-                    console.log('Messages:', messages);
                     currentConversationId = id;
                     displayMessagesAsChat(messages);
                 })
@@ -545,7 +584,6 @@
             }
         }
         function sendAudioToServer(audioBlob) {
-            console.log('Sending audio to server...'); // Add this log
             fetch('http://localhost:8080/crackllama:crackllama:template.os/transcribe', {
                 method: 'POST',
                 body: audioBlob,
@@ -554,11 +592,9 @@
                 }
             })
                 .then(response => {
-                    console.log('Received response from server'); // Add this log
                     return response.text();
                 })
                 .then(transcript => {
-                    console.log('Transcription received:', transcript); // Add this log
                     document.getElementById('promptInput').value = transcript;
                     autoExpand(document.getElementById('promptInput'));
                     document.getElementById('promptInput').focus(); // Add this line to focus on the input field
