@@ -337,12 +337,17 @@
                 messageElement.className = index % 2 === 0 ? 'user-message' : 'system-message';
                 
                 // Check if message is an object or a string
+                let content = '';
                 if (typeof message === 'object' && message !== null) {
-                    messageElement.textContent = message.content || JSON.stringify(message);
+                    content = message.content || JSON.stringify(message);
                 } else {
-                    messageElement.textContent = message;
+                    content = message;
                 }
-            
+        
+                // Replace line breaks with <br> tags
+                content = content.replace(/\n/g, '<br>');
+                
+                messageElement.innerHTML = content;
                 display.appendChild(messageElement);
             });
         }
