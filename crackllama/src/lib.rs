@@ -1,8 +1,8 @@
 use kinode_process_lib::{
     await_message, call_init, get_blob, http, println, Address, Message, Request,
 };
-use std::collections::HashMap;
 use rand;
+use std::collections::HashMap;
 
 mod structs;
 use structs::*;
@@ -23,6 +23,7 @@ wit_bindgen::generate!({
 
 pub const VECTORBASE_ADDRESS: (&str, &str, &str, &str) =
     ("our", "vectorbase", "command_center", "appattacc.os");
+pub const VECTORBASE_DATABASE_NAME: &str = "llm_conversations";
 
 fn update_conversation(
     prompt: &str,
@@ -71,7 +72,10 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
     let Some(conversation) = state.conversations.get_mut(&prompt.conversation_id) else {
         println!("Our available conversations are {:?}", state.conversations);
-        println!("But we got a prompt with conversation_id {:?}", prompt.conversation_id);
+        println!(
+            "But we got a prompt with conversation_id {:?}",
+            prompt.conversation_id
+        );
         http::send_response(
             http::StatusCode::INTERNAL_SERVER_ERROR,
             Some(HashMap::from([(
@@ -82,7 +86,7 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
         );
         return Ok(());
     };
-    
+
     let answer = get_groq_answer_with_history(
         &prompt.prompt,
         &conversation.messages.clone(),
@@ -99,8 +103,22 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
             "Content-Type".to_string(),
             "application/json".to_string(),
         )])),
-        message_history.as_bytes().to_vec(),
+        message_history.clone().as_bytes().to_vec(),
     );
+
+    {
+        let conversation_id_str = prompt.conversation_id.to_string();
+        let request = vectorbase_interface::Request::SubmitData {
+            database_name: VECTORBASE_DATABASE_NAME.to_string(),
+            values: vec![(conversation_id_str, message_history)],
+        };
+
+        let response = Request::to(VECTORBASE_ADDRESS)
+            .body(serde_json::to_vec(&request).unwrap())
+            .send_and_await_response(30)
+            .unwrap()
+            .unwrap();
+    }
 
     state.save();
     Ok(())
@@ -163,17 +181,28 @@ fn transcribe(bytes: Vec<u8>) -> anyhow::Result<()> {
 }
 
 fn list_conversations(state: &State) -> anyhow::Result<()> {
-    let mut conversations: Vec<_> = state.conversations.iter()
-        .map(|(id, conv)| (id, conv.title.clone().unwrap_or_default(), conv.date_created))
+    let mut conversations: Vec<_> = state
+        .conversations
+        .iter()
+        .map(|(id, conv)| {
+            (
+                id,
+                conv.title.clone().unwrap_or_default(),
+                conv.date_created,
+            )
+        })
         .collect();
-    
-    conversations.sort_by(|a, b| b.2.cmp(&a.2));  // Sort by date_created in descending order
-    
-    let response = conversations.into_iter()
-        .map(|(id, title, _)| serde_json::json!({
-            "id": id,
-            "title": title
-        }))
+
+    conversations.sort_by(|a, b| b.2.cmp(&a.2)); // Sort by date_created in descending order
+
+    let response = conversations
+        .into_iter()
+        .map(|(id, title, _)| {
+            serde_json::json!({
+                "id": id,
+                "title": title
+            })
+        })
         .collect::<Vec<_>>();
 
     let json = serde_json::to_string(&response)?;
@@ -191,7 +220,7 @@ fn list_conversations(state: &State) -> anyhow::Result<()> {
 
 fn get_conversation(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
     let conversation_id: i32 = serde_json::from_slice(bytes)?;
-    
+
     if let Some(conversation) = state.conversations.get(&conversation_id) {
         http::send_response(
             http::StatusCode::OK,
@@ -216,7 +245,7 @@ fn get_conversation(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
 
 fn delete_conversation(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
     let conversation_id: i32 = serde_json::from_slice(bytes)?;
-    
+
     if state.conversations.remove(&conversation_id).is_some() {
         http::send_response(
             http::StatusCode::OK,
@@ -239,6 +268,22 @@ fn delete_conversation(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn search(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
+    let search_query: String = serde_json::from_slice(bytes)?;
+
+    let dummy_results: Vec<i32> = vec![1, 2, 3, 4, 5];
+
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        serde_json::to_vec(&dummy_results)?,
+    );
+
+    Ok(())
+}
 
 fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     let http_request = http::HttpServerRequest::from_bytes(body)?
@@ -257,6 +302,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
         "/list_conversations" => list_conversations(state),
         "/get_conversation" => get_conversation(&bytes, state),
         "/delete_conversation" => delete_conversation(&bytes, state),
+        "/search" => search(&bytes, state),
         _ => Ok(()),
     }
 }
@@ -275,9 +321,10 @@ fn init(our: Address) {
             "/new_conversation",
             "/prompt",
             "/transcribe",
-            "/list_conversations", 
+            "/list_conversations",
             "/get_conversation",
             "/delete_conversation",
+            "/search",
         ],
     ) {
         panic!("Error binding https paths: {:?}", e);
@@ -285,7 +332,7 @@ fn init(our: Address) {
 
     let mut state = State::fetch().unwrap_or_default();
 
-    // temp_test(); 
+    // temp_test();
 
     loop {
         match handle_message(&our, &mut state) {
