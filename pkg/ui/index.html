@@ -150,6 +150,41 @@
             /* Add a border to see the container */
         }
 
+        .conversation-container {
+            display: flex;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+    
+        .conversation-container button {
+            flex-grow: 1;
+            margin-right: 5px;
+        }
+
+        .conversation-container button:first-child {
+            flex: 0 0 80%;
+            margin-right: 5px;
+        }
+    
+        .delete-button {
+            flex: 0 0 20%;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+    
+        .delete-button {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
         .user-message,
         .system-message {
             padding: 10px;
@@ -405,13 +440,49 @@
         function displayConversations(conversations) {
             const conversationList = document.getElementById('conversationList');
             conversationList.innerHTML = '';
-
+        
             conversations.forEach(conversation => {
+                const container = document.createElement('div');
+                container.className = 'conversation-container';
+        
                 const button = document.createElement('button');
                 button.textContent = conversation.title || 'Untitled';
                 button.onclick = () => loadConversation(conversation.id);
-                conversationList.appendChild(button);
+        
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '🗑️';
+                deleteButton.className = 'delete-button';
+                deleteButton.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteConversation(conversation.id);
+                };
+        
+                container.appendChild(button);
+                container.appendChild(deleteButton);
+                conversationList.appendChild(container);
             });
+        }
+        
+        function deleteConversation(id) {
+            if (confirm('Are you sure you want to delete this conversation?')) {
+                fetch('http://localhost:8080/crackllama:crackllama:template.os/delete_conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(id)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Conversation deleted successfully');
+                        fetchConversations(); // Refresh the conversation list
+                    } else {
+                        console.error('Failed to delete conversation:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error deleting conversation:', error));
+            }
         }
 
         function loadConversation(id) {
@@ -424,15 +495,9 @@
             })
                 .then(response => response.json())
                 .then(messages => {
+                    console.log('Messages:', messages);
                     currentConversationId = id;
-                    // Clear the answer display
-                    document.getElementById('answerDisplay').innerHTML = '';
-                    // Display the messages (you may want to format this better)
-                    messages.forEach(message => {
-                        const messageElement = document.createElement('div');
-                        messageElement.textContent = `${message.role}: ${message.content}`;
-                        document.getElementById('answerDisplay').appendChild(messageElement);
-                    });
+                    displayMessagesAsChat(messages);
                 })
                 .catch(error => console.error('Error loading conversation:', error));
         }
