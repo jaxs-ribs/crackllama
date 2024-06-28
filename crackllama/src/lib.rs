@@ -108,7 +108,7 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
 
     {
         let conversation_id_str = prompt.conversation_id.to_string();
-        let request = vectorbase_interface::Request::SubmitData {
+        let request = vectorbase_interface::vectorbase::Request::SubmitData {
             database_name: VECTORBASE_DATABASE_NAME.to_string(),
             values: vec![(conversation_id_str, message_history)],
         };
@@ -272,7 +272,7 @@ fn search(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
     let query: String = serde_json::from_slice(bytes)?;
     println!("Searching for {:?}", query);
 
-    let request = vectorbase_interface::Request::SemanticSearch {
+    let request = vectorbase_interface::vectorbase::Request::SemanticSearch {
         database_name: VECTORBASE_DATABASE_NAME.to_string(),
         top_k: 50,
         query,
@@ -285,7 +285,7 @@ fn search(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
         .unwrap();
     println!("Request sent!");
 
-    if let Ok(vectorbase_interface::Response::SemanticSearch(results)) =
+    if let Ok(vectorbase_interface::vectorbase::Response::SemanticSearch(results)) =
         serde_json::from_slice(
             response.body(),
     ) {

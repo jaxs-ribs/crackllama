@@ -5,13 +5,13 @@ use crate::VECTORBASE_ADDRESS;
 pub fn temp_test() {
     {
         // List Database
-        let request = vectorbase_interface::Request::ListDatabases;
+        let request = vectorbase_interface::vectorbase::Request::ListDatabases;
         let response = Request::to(VECTORBASE_ADDRESS)
             .body(serde_json::to_vec(&request).unwrap())
             .send_and_await_response(30)
             .unwrap()
             .unwrap();
-        if let vectorbase_interface::Response::ListDatabases(databases) =
+        if let vectorbase_interface::vectorbase::Response::ListDatabases(databases) =
             serde_json::from_slice(response.body()).unwrap()
         {
             println!("Databases are: {:?}", databases);
@@ -21,7 +21,7 @@ pub fn temp_test() {
     }
     {
         // Submit Data
-        let request = vectorbase_interface::Request::SubmitData {
+        let request = vectorbase_interface::vectorbase::Request::SubmitData {
             database_name: "test4".to_string(),
             values: vec![
                 ("id_001".to_string(), "Cats have retractable claws that help them climb and hunt.".to_string()),
@@ -42,7 +42,7 @@ pub fn temp_test() {
             .send_and_await_response(30)
             .unwrap()
             .unwrap();
-        if let vectorbase_interface::Response::SubmitData =
+        if let vectorbase_interface::vectorbase::Response::SubmitData =
             serde_json::from_slice(response.body()).unwrap()
         {
             println!("Success populating!");
@@ -52,7 +52,7 @@ pub fn temp_test() {
     }
     {
         // Semantic Search
-        let request = vectorbase_interface::Request::SemanticSearch {
+        let request = vectorbase_interface::vectorbase::Request::SemanticSearch {
             database_name: "test4".to_string(),
             top_k: 3,
             query: "What are cats like?".to_string(),
@@ -63,7 +63,7 @@ pub fn temp_test() {
             .send_and_await_response(30)
             .unwrap()
             .unwrap();
-        if let vectorbase_interface::Response::SemanticSearch(results) =
+        if let vectorbase_interface::vectorbase::Response::SemanticSearch(results) =
             serde_json::from_slice(response.body()).unwrap()
         {
             println!("Results are: {:?}", results);
