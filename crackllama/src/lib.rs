@@ -13,9 +13,6 @@ use llm::*;
 mod stt;
 use stt::*;
 
-mod temp;
-use temp::*;
-
 wit_bindgen::generate!({
     path: "wit",
     world: "process",
