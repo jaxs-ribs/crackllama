@@ -331,8 +331,8 @@ fn init(our: Address) {
     if let Err(e) = http::serve_index_html(
         &our,
         "ui",
-        false,
         true,
+        false,
         vec![
             "/",
             "/list_models",

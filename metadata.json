@@ -1,11 +1,11 @@
 {
-    "name": "crackllama",
+    "name": "talk_to_kinode",
     "description": "",
     "image": "",
     "properties": {
-        "package_name": "crackllama",
+        "package_name": "talk_to_kinode",
         "current_version": "0.1.0",
-        "publisher": "template.os",
+        "publisher": "uncentered.os",
         "mirrors": [],
         "code_hashes": {
             "0.1.0": ""

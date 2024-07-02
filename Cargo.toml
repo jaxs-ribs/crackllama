@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "crackllama",
+    "talk_to_kinode",
 ]
 
 [profile.release]
