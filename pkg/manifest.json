@@ -2,7 +2,7 @@
     {
         "process_name": "talk_to_kinode",
         "process_wasm_path": "/talk_to_kinode.wasm",
-        "on_exit": "Restart",
+        "on_exit": "None",
         "request_networking": true,
         "request_capabilities": [
             "http_server:distro:sys",
@@ -11,7 +11,10 @@
             "speech_to_text:command_center:appattacc.os",
             "openai:command_center:appattacc.os"
         ],
-        "grant_capabilities": [],
-        "public": true
+        "grant_capabilities": [
+            "http_server:distro:sys",
+            "http_client:distro:sys"
+        ],
+        "public": false
     }
 ]

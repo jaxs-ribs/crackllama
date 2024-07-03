@@ -3,6 +3,7 @@ use llm_interface::openai::LLMResponse;
 use llm_interface::openai::LLMRequest;
 use llm_interface::openai::MessageBuilder;
 use llm_interface::openai::ChatRequestBuilder;
+use llm_interface::openai::ClaudeChatRequestBuilder;
 
 pub const LLM_ADDRESS: (&str, &str, &str, &str) =
     ("our", "openai", "command_center", "appattacc.os");
@@ -25,7 +26,7 @@ pub fn get_groq_answer(text: &str, model: &str) -> anyhow::Result<String> {
     Ok(chat.choices[0].message.content.clone())
 }
 
-pub fn get_groq_answer_with_history(text: &str, message_history: &Vec<String>, model: &str) -> anyhow::Result<String> {
+pub fn get_claude_answer(text: &str, message_history: &Vec<String>, model: &str) -> anyhow::Result<String> {
     let mut messages = vec![];
     
     // We truncate the conversation based on the number of messages to not go beyond the context window. 
@@ -55,16 +56,17 @@ pub fn get_groq_answer_with_history(text: &str, message_history: &Vec<String>, m
         .content(text.to_string())
         .build()?);
 
-    let request = ChatRequestBuilder::default()
+    let request = ClaudeChatRequestBuilder::default()
         .model(model.to_string())
         .messages(messages)
         .build()?;
-    let request = serde_json::to_vec(&LLMRequest::GroqChat(request))?;
+    let request = serde_json::to_vec(&LLMRequest::ClaudeChat(request))?;
     let response = Request::to(LLM_ADDRESS)
         .body(request)
         .send_and_await_response(30)??;
-    let LLMResponse::Chat(chat) = serde_json::from_slice(response.body())? else {
+    let LLMResponse::ClaudeChat(chat) = serde_json::from_slice(response.body())? else {
         return Err(anyhow::anyhow!("Failed to parse LLM response"));
     };
-    Ok(chat.choices[0].message.content.clone())
+    let message = chat.content.last().map(|c| c.text.clone()).unwrap_or_default();
+    Ok(message)
 }

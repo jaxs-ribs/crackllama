@@ -84,7 +84,7 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
         return Ok(());
     };
 
-    let answer = get_groq_answer_with_history(
+    let answer = get_claude_answer(
         &prompt.prompt,
         &conversation.messages.clone(),
         &prompt.model,
@@ -110,7 +110,7 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
             values: vec![(conversation_id_str, message_history)],
         };
 
-        let response = Request::to(VECTORBASE_ADDRESS)
+        let _ = Request::to(VECTORBASE_ADDRESS)
             .body(serde_json::to_vec(&request).unwrap())
             .send_and_await_response(30)
             .unwrap()
@@ -328,7 +328,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
 call_init!(init);
 fn init(our: Address) {
     println!("begin");
-    if let Err(e) = http::serve_index_html(
+    if let Err(e) = http::serve_ui(
         &our,
         "ui",
         true,

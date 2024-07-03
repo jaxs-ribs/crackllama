@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './ChatInterface.css';
+import { exampleAnswer } from './samplePrompt';
 
 const ChatInterface = () => {
   const [input, setInput] = useState('');
@@ -30,59 +31,41 @@ const ChatInterface = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (input.trim() === '') return;
-
+  
     const newQuestion = { type: 'question', content: input };
     setConversation(prev => [...prev, newQuestion]);
-
+  
     console.log('Sending prompt:', input, 'RAG enabled:', ragEnabled);
-    
-    const exampleAnswer = `Here's an example of how to create a simple React component:
-
-To create a basic React component, you can follow these steps:
-
-1. First, import React:
-
-\`\`\`jsx
-import React from 'react';
-\`\`\`
-
-2. Then, define your component as a function:
-
-\`\`\`jsx
-function MyComponent() {
-  return (
-    <div>
-      <h1>Hello, World!</h1>
-      <p>This is my first React component.</p>
-    </div>
-  );
-}
-\`\`\`
-
-3. Finally, export your component:
-
-\`\`\`jsx
-export default MyComponent;
-\`\`\`
-
-You can then use this component in other parts of your application by importing it and rendering it like this:
-
-\`\`\`jsx
-import MyComponent from './MyComponent';
-
-function App() {
-  return (
-    <div>
-      <MyComponent />
-    </div>
-  );
-}
-\`\`\`
-
-This is a basic example, but it demonstrates the fundamental structure of a React component.`;
-
-    const newAnswer = { type: 'answer', content: exampleAnswer };
-    setConversation(prev => [...prev, newAnswer]);
+  
+    const payload = {
+      conversation_id: 0,
+      model: 'claude-3-5-sonnet-20240620',
+      prompt: input,
+    };
+  
+    try {
+      const response = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        const updatedConversation = data.map((content, index) => ({
+          type: index % 2 === 0 ? 'question' : 'answer',
+          content,
+        }));
+        setConversation(updatedConversation);
+      } else {
+        console.error('Failed to send prompt:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error sending prompt:', error);
+    }
+  
     setInput('');
   };
 
