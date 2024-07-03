@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import 'react-syntax-highlighter/dist/esm/languages/prism/rust';
 import './ChatInterface.css';
 import { exampleAnswer } from './samplePrompt';
 
@@ -6,11 +9,35 @@ const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [ragEnabled, setRagEnabled] = useState(false);
   const [conversation, setConversation] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
   const textareaRef = useRef(null);
 
   useEffect(() => {
     adjustTextareaHeight();
   }, [input]);
+
+  useEffect(() => {
+    startNewConversation();
+  }, []);
+
+  const startNewConversation = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/new_conversation', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Data:', data);
+        // Use 'id' instead of 'conversation_id'
+        setConversationId(data.id);
+        console.log('New conversation started with ID:', data.id);
+      } else {
+        console.error('Failed to start new conversation:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error starting new conversation:', error);
+    }
+  };
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
@@ -37,8 +64,9 @@ const ChatInterface = () => {
   
     console.log('Sending prompt:', input, 'RAG enabled:', ragEnabled);
   
+    console.log('Conversation ID:', conversationId);
     const payload = {
-      conversation_id: 0,
+      conversation_id: conversationId, // No need to use Number() here
       model: 'claude-3-5-sonnet-20240620',
       prompt: input,
     };
@@ -83,11 +111,16 @@ const ChatInterface = () => {
           <div key={index} className={`message ${message.type}`}>
             {message.content.split(/(\`\`\`[\s\S]*?\`\`\`)/).map((part, i) => {
               if (part.startsWith('```') && part.endsWith('```')) {
-                const code = part.slice(3, -3);
+                const [, language, code] = part.match(/```(\w+)?\n?([\s\S]+)```/) || [];
                 return (
-                  <pre key={i} onClick={() => copyToClipboard(code)}>
-                    <code>{code}</code>
-                  </pre>
+                  <SyntaxHighlighter
+                    key={i}
+                    language={language === 'rust' ? 'rust' : (language || 'text')}
+                    style={vscDarkPlus}
+                    onClick={() => copyToClipboard(code)}
+                  >
+                    {code.trim()}
+                  </SyntaxHighlighter>
                 );
               }
               return <p key={i}>{part}</p>;

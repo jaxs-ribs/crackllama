@@ -67,12 +67,8 @@ fn handle_http_messages(msg: &Message, state: &mut State) -> anyhow::Result<()> 
 
 fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
+    println!("Received prompt: {:?}", prompt);
     let Some(conversation) = state.conversations.get_mut(&prompt.conversation_id) else {
-        println!("Our available conversations are {:?}", state.conversations);
-        println!(
-            "But we got a prompt with conversation_id {:?}",
-            prompt.conversation_id
-        );
         http::send_response(
             http::StatusCode::INTERNAL_SERVER_ERROR,
             Some(HashMap::from([(
@@ -103,19 +99,20 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
         message_history.clone().as_bytes().to_vec(),
     );
 
-    {
-        let conversation_id_str = prompt.conversation_id.to_string();
-        let request = vectorbase_interface::vectorbase::Request::SubmitData {
-            database_name: VECTORBASE_DATABASE_NAME.to_string(),
-            values: vec![(conversation_id_str, message_history)],
-        };
+    // TODO: Zena
+    // {
+    //     let conversation_id_str = prompt.conversation_id.to_string();
+    //     let request = vectorbase_interface::vectorbase::Request::SubmitData {
+    //         database_name: VECTORBASE_DATABASE_NAME.to_string(),
+    //         values: vec![(conversation_id_str, message_history)],
+    //     };
 
-        let _ = Request::to(VECTORBASE_ADDRESS)
-            .body(serde_json::to_vec(&request).unwrap())
-            .send_and_await_response(30)
-            .unwrap()
-            .unwrap();
-    }
+    //     let _ = Request::to(VECTORBASE_ADDRESS)
+    //         .body(serde_json::to_vec(&request).unwrap())
+    //         .send_and_await_response(30)
+    //         .unwrap()
+    //         .unwrap();
+    // }
 
     state.save();
     Ok(())
@@ -150,6 +147,8 @@ fn new_conversation(state: &mut State) -> anyhow::Result<()> {
     let response = serde_json::json!({
         "id": new_id
     });
+
+    println!("New conversation created with ID: {}", new_id);
 
     http::send_response(
         http::StatusCode::OK,

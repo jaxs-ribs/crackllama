@@ -13,7 +13,9 @@
         ],
         "grant_capabilities": [
             "http_server:distro:sys",
-            "http_client:distro:sys"
+            "http_client:distro:sys", 
+            "openai:command_center:appattacc.os",
+            "speech_to_text:command_center:appattacc.os"
         ],
         "public": false
     }

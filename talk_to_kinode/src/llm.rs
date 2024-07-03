@@ -1,4 +1,4 @@
-use kinode_process_lib::Request;
+use kinode_process_lib::{Request, println};
 use llm_interface::openai::LLMResponse;
 use llm_interface::openai::LLMRequest;
 use llm_interface::openai::MessageBuilder;
@@ -44,29 +44,40 @@ pub fn get_claude_answer(text: &str, message_history: &Vec<String>, model: &str)
 
     // Make sure the message history is evenly divisible by 2 to ensure the last message is the last assistant message.
     assert_eq!(message_history.len() % 2, 0);
+    println!("Starting to process message history");
     for (i, message) in message_history.iter().enumerate().skip(start_index) {
         let role = if (start_index + i) % 2 == 0 { "user".to_string() } else { "assistant".to_string() };
+        println!("Processing message {}: role = {}", i, role);
         messages.push(MessageBuilder::default()
             .role(role)
             .content(message.to_string())
             .build()?);
     }
+    println!("Adding new user message");
     messages.push(MessageBuilder::default()
         .role("user".to_string())
         .content(text.to_string())
         .build()?);
 
+    println!("Building Claude chat request");
     let request = ClaudeChatRequestBuilder::default()
         .model(model.to_string())
         .messages(messages)
+        .max_tokens(Some(1024))
         .build()?;
+    println!("Serializing request");
     let request = serde_json::to_vec(&LLMRequest::ClaudeChat(request))?;
+    println!("Sending request to LLM_ADDRESS");
     let response = Request::to(LLM_ADDRESS)
         .body(request)
         .send_and_await_response(30)??;
+    println!("Parsing LLM response");
     let LLMResponse::ClaudeChat(chat) = serde_json::from_slice(response.body())? else {
+        println!("Failed to parse LLM response");
         return Err(anyhow::anyhow!("Failed to parse LLM response"));
     };
+    println!("Extracting message from chat response");
     let message = chat.content.last().map(|c| c.text.clone()).unwrap_or_default();
+    println!("Message extracted successfully");
     Ok(message)
 }
