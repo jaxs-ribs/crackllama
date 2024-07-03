@@ -20,6 +20,12 @@ const ChatInterface = () => {
     startNewConversation();
   }, []);
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [conversation]);
+
   const startNewConversation = async () => {
     try {
       const response = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/new_conversation', {
@@ -58,19 +64,20 @@ const ChatInterface = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (input.trim() === '') return;
-  
+
     const newQuestion = { type: 'question', content: input };
     setConversation(prev => [...prev, newQuestion]);
-  
+    setInput(''); // Move this line here to clear the input immediately
+
     console.log('Sending prompt:', input, 'RAG enabled:', ragEnabled);
-  
+
     console.log('Conversation ID:', conversationId);
     const payload = {
-      conversation_id: conversationId, // No need to use Number() here
+      conversation_id: conversationId,
       model: 'claude-3-5-sonnet-20240620',
       prompt: input,
     };
-  
+
     try {
       const response = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/prompt', {
         method: 'POST',
@@ -79,7 +86,7 @@ const ChatInterface = () => {
         },
         body: JSON.stringify(payload),
       });
-  
+
       if (response.ok) {
         const data = await response.json();
         const updatedConversation = data.map((content, index) => ({
@@ -93,8 +100,6 @@ const ChatInterface = () => {
     } catch (error) {
       console.error('Error sending prompt:', error);
     }
-  
-    setInput('');
   };
 
   const handleKeyDown = (e) => {
