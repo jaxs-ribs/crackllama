@@ -4,6 +4,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'react-syntax-highlighter/dist/esm/languages/prism/rust';
 import './ChatInterface.css';
 import { exampleAnswer } from './samplePrompt';
+import ProgressCounter from './ProgressCounter';
 
 const ChatInterface = () => {
   const [input, setInput] = useState('');
@@ -13,6 +14,7 @@ const ChatInterface = () => {
   const textareaRef = useRef(null);
   const [enrichedPrompt, setEnrichedPrompt] = useState('');
   const [isEnriching, setIsEnriching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     adjustTextareaHeight();
@@ -70,6 +72,7 @@ const ChatInterface = () => {
     const newQuestion = { type: 'question', content: input };
     setConversation(prev => [...prev, newQuestion]);
     setInput('');
+    setIsLoading(true);
 
     console.log('Sending prompt:', input, 'RAG enabled:', ragEnabled);
     console.log('Conversation ID:', conversationId);
@@ -119,12 +122,15 @@ const ChatInterface = () => {
           content: content === "placeholder" ? exampleAnswer : content,
         }));
         setConversation(updatedConversation);
+        setIsLoading(false);
       } else {
         console.error('Failed to send prompt:', promptResponse.statusText);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
       setIsEnriching(false);
+      setIsLoading(false);
     }
   };
 
@@ -159,16 +165,19 @@ const ChatInterface = () => {
           </div>
         ))}
       </div>
-      <div className="enriched-prompt-container">
-        {ragEnabled && (isEnriching ? (
-          <p>Enriching prompt...</p>
-        ) : enrichedPrompt && (
-          <details>
-            <summary>View Enriched Prompt</summary>
-            <pre>{enrichedPrompt}</pre>
-          </details>
-        ))}
-      </div>
+      {ragEnabled && (isEnriching || enrichedPrompt) && (
+        <div className="enriched-prompt-container">
+          {isEnriching ? (
+            <p>Enriching prompt...</p>
+          ) : enrichedPrompt && (
+            <details>
+              <summary>View Enriched Prompt</summary>
+              <pre>{enrichedPrompt}</pre>
+            </details>
+          )}
+        </div>
+      )}
+      {isLoading && <ProgressCounter isLoading={isLoading} />}
       <div className="input-area">
         <form onSubmit={handleSubmit}>
           <div className="input-container">

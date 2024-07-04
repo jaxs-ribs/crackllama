@@ -123,6 +123,7 @@ body, html {
   bottom: 0;
   background-color: #2d2d2d;
   padding-top: 10px;
+  z-index: 10;
 }
 
 .message {
@@ -187,4 +188,34 @@ body, html {
   margin-top: 10px;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.progress-counter {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background-color: #2a2a2a;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background-color: #4CAF50;
+  animation: progress-animation 2s linear infinite;
+}
+
+@keyframes progress-animation {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
+  }
 }
