@@ -11,6 +11,8 @@ const ChatInterface = () => {
   const [conversation, setConversation] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const textareaRef = useRef(null);
+  const [enrichedPrompt, setEnrichedPrompt] = useState('');
+  const [isEnriching, setIsEnriching] = useState(false);
 
   useEffect(() => {
     adjustTextareaHeight();
@@ -67,38 +69,63 @@ const ChatInterface = () => {
 
     const newQuestion = { type: 'question', content: input };
     setConversation(prev => [...prev, newQuestion]);
-    setInput(''); // Move this line here to clear the input immediately
+    setInput('');
 
     console.log('Sending prompt:', input, 'RAG enabled:', ragEnabled);
-
     console.log('Conversation ID:', conversationId);
-    const payload = {
-      conversation_id: conversationId,
-      model: 'claude-3-5-sonnet-20240620',
-      prompt: input,
-    };
 
     try {
-      const response = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/prompt', {
+      let enrichedPrompt = '';
+      
+      // Only enrich the prompt for the first message
+      if (conversation.length === 0) {
+        setIsEnriching(true);
+        const ragResponse = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/rag', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(input),
+        });
+
+        if (!ragResponse.ok) {
+          throw new Error('Failed to get RAG response');
+        }
+
+        enrichedPrompt = await ragResponse.json();
+        setEnrichedPrompt(enrichedPrompt);
+        setIsEnriching(false);
+      }
+
+      const payload = {
+        conversation_id: conversationId,
+        model: 'claude-3-5-sonnet-20240620',
+        prompt: input,
+        ...(conversation.length === 0 && { enriched_prompt: enrichedPrompt }),
+      };
+
+      const promptResponse = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/prompt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
+      console.log('Prompt response:', promptResponse);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (promptResponse.ok) {
+        const data = await promptResponse.json();
         const updatedConversation = data.map((content, index) => ({
           type: index % 2 === 0 ? 'question' : 'answer',
-          content,
+          content: content === "placeholder" ? exampleAnswer : content,
         }));
         setConversation(updatedConversation);
       } else {
-        console.error('Failed to send prompt:', response.statusText);
+        console.error('Failed to send prompt:', promptResponse.statusText);
       }
     } catch (error) {
-      console.error('Error sending prompt:', error);
+      console.error('Error in handleSubmit:', error);
+      setIsEnriching(false);
     }
   };
 
@@ -132,6 +159,16 @@ const ChatInterface = () => {
             })}
           </div>
         ))}
+      </div>
+      <div className="enriched-prompt-container">
+        {isEnriching ? (
+          <p>Enriching prompt...</p>
+        ) : enrichedPrompt && (
+          <details>
+            <summary>View Enriched Prompt</summary>
+            <pre>{enrichedPrompt}</pre>
+          </details>
+        )}
       </div>
       <div className="input-area">
         <form onSubmit={handleSubmit}>

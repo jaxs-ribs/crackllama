@@ -161,3 +161,30 @@ body, html {
   font-family: 'Courier New', Courier, monospace;
   font-size: 14px;
 }
+
+.enriched-prompt-container {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #3a3a3a;
+  border-radius: 4px;
+}
+
+.enriched-prompt-container p {
+  margin: 0;
+  font-style: italic;
+}
+
+.enriched-prompt-container details {
+  margin-top: 10px;
+}
+
+.enriched-prompt-container summary {
+  cursor: pointer;
+  color: #4CAF50;
+}
+
+.enriched-prompt-container pre {
+  margin-top: 10px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}

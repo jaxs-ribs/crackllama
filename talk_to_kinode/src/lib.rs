@@ -4,6 +4,8 @@ use kinode_process_lib::{
 use rand;
 use std::collections::HashMap;
 
+use vectorbase_interface::rag::{RAGType, Request as RagRequest, Response as RagResponse};
+
 mod structs;
 use structs::*;
 
@@ -19,7 +21,7 @@ wit_bindgen::generate!({
 });
 
 pub const VECTORBASE_ADDRESS: (&str, &str, &str, &str) =
-    ("our", "vectorbase", "command_center", "appattacc.os");
+    ("our", "vectorbase_demo", "command_center", "appattacc.os");
 pub const VECTORBASE_DATABASE_NAME: &str = "llm_conversations";
 
 fn update_conversation(
@@ -30,11 +32,18 @@ fn update_conversation(
     conversation.messages.push(prompt.to_string());
     conversation.messages.push(answer.to_string());
 
-    if conversation.messages.len() == 2 {
-        let summary_prompt = format!("Given the following conversation: {:?}, summarize the topic in 80 words or less. Only output the title, do not explain yourself.", conversation.messages);
-        let summary_answer = get_groq_answer(&summary_prompt, &Model::Llama38B.get_model_name())?;
-        conversation.title = Some(summary_answer);
-    }
+    /*
+    TODO: Zena: Uncomment this once we use multiple conversations
+    Note that we get the complaint
+
+    Thu 16:51 command_center:appattacc.os: openai_api: error: missing field `choices` at line 1 column 327
+     */
+
+    // if conversation.messages.len() == 2 {
+    //     let summary_prompt = format!("Given the following conversation: {:?}, summarize the topic in 80 words or less. Only output the title, do not explain yourself.", conversation.messages);
+    //     let summary_answer = get_groq_answer(&summary_prompt, &Model::Llama38B.get_model_name())?;
+    //     conversation.title = Some(summary_answer);
+    // }
 
     Ok(())
 }
@@ -65,9 +74,37 @@ fn handle_http_messages(msg: &Message, state: &mut State) -> anyhow::Result<()> 
     Ok(())
 }
 
+fn rag(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
+    println!("Calling RAG");
+    let prompt: String = serde_json::from_slice(bytes)?;
+
+    let request = RagRequest::RAG {
+        prompt,
+        rag_type: RAGType::Naive,
+    };
+    let message = Request::to(VECTORBASE_ADDRESS)
+        .body(serde_json::to_vec(&request)?)
+        .send_and_await_response(30)??;
+
+    let RagResponse::RAG(enriched_prompt) = serde_json::from_slice(message.body())? else {
+        return Err(anyhow::anyhow!("Failed to parse RAG response"));
+    };
+
+    http::send_response(
+        http::StatusCode::OK,
+        Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        serde_json::to_vec(&enriched_prompt)?,
+    );
+
+    Ok(())
+}
+
 fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
+    println!("Calling Prompt");
     let prompt = serde_json::from_slice::<Prompt>(bytes)?;
-    println!("Received prompt: {:?}", prompt);
     let Some(conversation) = state.conversations.get_mut(&prompt.conversation_id) else {
         http::send_response(
             http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -80,16 +117,23 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
         return Ok(());
     };
 
-    let answer = get_claude_answer(
-        &prompt.prompt,
-        &conversation.messages.clone(),
-        &prompt.model,
-    )?;
+    // let prompt = if let Some(enriched_prompt) = prompt.enriched_prompt {
+    //     format!("{}\n\nActual Prompt:\n\n{}", enriched_prompt, prompt.prompt)
+    // } else {
+    //     prompt.prompt
+    // };
+    // let answer = get_claude_answer(
+    //     &prompt,
+    //     &conversation.messages.clone(),
+    //     &prompt.model,
+    // )?;
+    let answer = "placeholder".to_string();
 
     update_conversation(&prompt.prompt, &answer, conversation)?;
 
     let message_history = serde_json::to_string(&conversation.messages)?;
 
+    println!("Message history looks like {:?}", message_history);
     http::send_response(
         http::StatusCode::OK,
         Some(HashMap::from([(
@@ -99,7 +143,7 @@ fn prompt(bytes: &[u8], state: &mut State) -> anyhow::Result<()> {
         message_history.clone().as_bytes().to_vec(),
     );
 
-    // TODO: Zena
+    // TODO: Zena: Uncomment and test if it works
     // {
     //     let conversation_id_str = prompt.conversation_id.to_string();
     //     let request = vectorbase_interface::vectorbase::Request::SubmitData {
@@ -282,10 +326,12 @@ fn search(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
     println!("Request sent!");
 
     if let Ok(vectorbase_interface::vectorbase::Response::SemanticSearch(results)) =
-        serde_json::from_slice(
-            response.body(),
-    ) {
-        let ids: Vec<i32> = results.iter().map(|r| r.0.parse::<i32>().unwrap_or_default()).collect();
+        serde_json::from_slice(response.body())
+    {
+        let ids: Vec<i32> = results
+            .iter()
+            .map(|r| r.0.parse::<i32>().unwrap_or_default())
+            .collect();
         println!("Results: {:?}", ids);
         http::send_response(
             http::StatusCode::OK,
@@ -314,6 +360,7 @@ fn handle_http_request(body: &[u8], state: &mut State) -> anyhow::Result<()> {
     match path.as_str() {
         "/list_models" => list_models(),
         "/new_conversation" => new_conversation(state),
+        "/rag" => rag(&bytes, state),
         "/prompt" => prompt(&bytes, state),
         "/transcribe" => transcribe(bytes),
         "/list_conversations" => list_conversations(state),
@@ -336,6 +383,7 @@ fn init(our: Address) {
             "/",
             "/list_models",
             "/new_conversation",
+            "/rag",
             "/prompt",
             "/transcribe",
             "/list_conversations",

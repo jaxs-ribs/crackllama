@@ -89,4 +89,5 @@ pub struct Prompt {
     pub conversation_id: i32,
     pub model: String,
     pub prompt: String,
+    pub enriched_prompt: Option<String>,
 }
