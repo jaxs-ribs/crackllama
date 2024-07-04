@@ -30,6 +30,19 @@ const ChatInterface = () => {
     }
   }, [conversation]);
 
+  useEffect(() => {
+    document.querySelectorAll('.message pre').forEach(block => {
+      block.addEventListener('click', function() {
+        navigator.clipboard.writeText(this.textContent).then(() => {
+          this.classList.add('copied');
+          setTimeout(() => {
+            this.classList.remove('copied');
+          }, 2000);
+        });
+      });
+    });
+  }, [conversation]);
+
   const startNewConversation = async () => {
     try {
       const response = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/new_conversation', {
