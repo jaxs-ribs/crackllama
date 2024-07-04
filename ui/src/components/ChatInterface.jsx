@@ -7,7 +7,7 @@ import { exampleAnswer } from './samplePrompt';
 
 const ChatInterface = () => {
   const [input, setInput] = useState('');
-  const [ragEnabled, setRagEnabled] = useState(false);
+  const [ragEnabled, setRagEnabled] = useState(true);
   const [conversation, setConversation] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const textareaRef = useRef(null);
@@ -77,8 +77,7 @@ const ChatInterface = () => {
     try {
       let enrichedPrompt = '';
       
-      // Only enrich the prompt for the first message
-      if (conversation.length === 0) {
+      if (ragEnabled && conversation.length === 0) {
         setIsEnriching(true);
         const ragResponse = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/rag', {
           method: 'POST',
@@ -101,7 +100,7 @@ const ChatInterface = () => {
         conversation_id: conversationId,
         model: 'claude-3-5-sonnet-20240620',
         prompt: input,
-        ...(conversation.length === 0 && { enriched_prompt: enrichedPrompt }),
+        ...(ragEnabled && conversation.length === 0 && { enriched_prompt: enrichedPrompt }),
       };
 
       const promptResponse = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/prompt', {
@@ -161,14 +160,14 @@ const ChatInterface = () => {
         ))}
       </div>
       <div className="enriched-prompt-container">
-        {isEnriching ? (
+        {ragEnabled && (isEnriching ? (
           <p>Enriching prompt...</p>
         ) : enrichedPrompt && (
           <details>
             <summary>View Enriched Prompt</summary>
             <pre>{enrichedPrompt}</pre>
           </details>
-        )}
+        ))}
       </div>
       <div className="input-area">
         <form onSubmit={handleSubmit}>
@@ -191,7 +190,7 @@ const ChatInterface = () => {
               checked={ragEnabled}
               onChange={(e) => setRagEnabled(e.target.checked)}
             />
-            <label htmlFor="rag-checkbox">RAG On/Off</label>
+            <label htmlFor="rag-checkbox">RAG (On by default)</label>
           </div>
         </form>
       </div>
