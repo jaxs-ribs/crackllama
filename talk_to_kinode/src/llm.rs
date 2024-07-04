@@ -59,7 +59,7 @@ pub fn get_claude_answer(text: &str, message_history: &Vec<String>, model: &str)
     let request = ClaudeChatRequestBuilder::default()
         .model(model.to_string())
         .messages(messages)
-        .max_tokens(Some(1024))
+        .max_tokens(Some(16384))
         .build()?;
     let request = serde_json::to_vec(&LLMRequest::ClaudeChat(request))?;
     let response = Request::to(LLM_ADDRESS)
