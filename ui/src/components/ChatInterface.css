@@ -190,6 +190,14 @@ body, html {
   word-wrap: break-word;
 }
 
+.enriched-prompt-container details details {
+  margin-left: 20px;
+}
+
+.enriched-prompt-container details details summary {
+  font-size: 0.9em;
+}
+
 .progress-counter {
   position: relative;
   width: 100%;

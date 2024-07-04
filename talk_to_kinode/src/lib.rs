@@ -86,9 +86,18 @@ fn rag(bytes: &[u8], _state: &mut State) -> anyhow::Result<()> {
         .body(serde_json::to_vec(&request)?)
         .send_and_await_response(30)??;
 
-    let RagResponse::RAG(enriched_prompt) = serde_json::from_slice(message.body())? else {
+    let RagResponse::RAG {
+        base_prompt,
+        link_prompt,
+    } = serde_json::from_slice(message.body())?
+    else {
         return Err(anyhow::anyhow!("Failed to parse RAG response"));
     };
+
+    let enriched_prompt = serde_json::json!({
+        "base_prompt": base_prompt,
+        "link_prompt": link_prompt
+    });
 
     http::send_response(
         http::StatusCode::OK,

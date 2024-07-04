@@ -12,7 +12,7 @@ const ChatInterface = () => {
   const [conversation, setConversation] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const textareaRef = useRef(null);
-  const [enrichedPrompt, setEnrichedPrompt] = useState('');
+  const [enrichedPrompt, setEnrichedPrompt] = useState(null);
   const [isEnriching, setIsEnriching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -78,7 +78,7 @@ const ChatInterface = () => {
     console.log('Conversation ID:', conversationId);
 
     try {
-      let enrichedPrompt = '';
+      let enrichedPrompt = null;
       
       if (ragEnabled && conversation.length === 0) {
         setIsEnriching(true);
@@ -103,7 +103,9 @@ const ChatInterface = () => {
         conversation_id: conversationId,
         model: 'claude-3-5-sonnet-20240620',
         prompt: input,
-        ...(ragEnabled && conversation.length === 0 && { enriched_prompt: enrichedPrompt }),
+        ...(ragEnabled && conversation.length === 0 && { 
+          enriched_prompt: `${enrichedPrompt.base_prompt}\n\n${enrichedPrompt.link_prompt}` 
+        }),
       };
 
       const promptResponse = await fetch('http://localhost:8080/talk_to_kinode:talk_to_kinode:uncentered.os/prompt', {
@@ -172,7 +174,14 @@ const ChatInterface = () => {
           ) : enrichedPrompt && (
             <details>
               <summary>View Enriched Prompt</summary>
-              <pre>{enrichedPrompt}</pre>
+              <details>
+                <summary>Base Prompt</summary>
+                <pre>{enrichedPrompt.base_prompt}</pre>
+              </details>
+              <details>
+                <summary>Link Prompt</summary>
+                <pre>{enrichedPrompt.link_prompt}</pre>
+              </details>
             </details>
           )}
         </div>
